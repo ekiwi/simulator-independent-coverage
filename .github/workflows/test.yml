@@ -30,33 +30,13 @@ jobs:
           cd coverage
           sbt ++${{ matrix.scala }} test
 
-  doc:
-    name: Documentation and Formatting
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Setup Scala
-        uses: olafurpg/setup-scala@v10
-      - name: Cache
-        uses: coursier/cache-action@v5
-      - name: Documentation
-        id: doc
-        run: |
-          cd coverage
-          sbt doc
-      - name: Check Formatting
-        run: |
-          cd coverage
-          sbt scalafmtCheckAll
-
   # Sentinel job to simplify how we specify which checks need to pass in branch
   # protection and in Mergify
   #
   # When adding new jobs, please add them to `needs` below
   all_tests_passed:
     name: "all tests passed"
-    needs: [test, doc]
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - run: echo Success!

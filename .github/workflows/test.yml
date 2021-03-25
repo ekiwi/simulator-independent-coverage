@@ -1,0 +1,62 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  test:
+    name: sbt test
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        scala: [2.12.13]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install Verilator
+        run: |
+          sudo apt-get install -y verilator
+          verilator --version
+      - name: Setup Scala
+        uses: olafurpg/setup-scala@v10
+        with:
+          java-version: adopt@1.8
+      - name: Cache Scala
+        uses: coursier/cache-action@v5
+      - name: Test
+        run: |
+          cd coverage
+          sbt ++${{ matrix.scala }} test
+
+  doc:
+    name: Documentation and Formatting
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Scala
+        uses: olafurpg/setup-scala@v10
+      - name: Cache
+        uses: coursier/cache-action@v5
+      - name: Documentation
+        id: doc
+        run: |
+          cd coverage
+          sbt doc
+      - name: Check Formatting
+        run: |
+          cd coverage
+          sbt scalafmtCheckAll
+
+  # Sentinel job to simplify how we specify which checks need to pass in branch
+  # protection and in Mergify
+  #
+  # When adding new jobs, please add them to `needs` below
+  all_tests_passed:
+    name: "all tests passed"
+    needs: [test, doc]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo Success!

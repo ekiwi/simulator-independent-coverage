@@ -12,6 +12,7 @@ libraryDependencies += "edu.berkeley.cs" %% "chiseltest" % "0.5-SNAPSHOT"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.6" % Test
 
 scalaSource in Compile := baseDirectory.value / "src"
+resourceDirectory in Compile := baseDirectory.value / "src" / "resources"
 scalaSource in Test := baseDirectory.value / "test"
 
 // use `sbt assembly` to build a fat jar

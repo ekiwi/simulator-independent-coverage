@@ -2,7 +2,8 @@
 
 package coverage.midas
 
-import coverage.{CompilerTest, LineCoveragePass, Test1Module}
+import coverage.circuits.Test1Module
+import coverage.{CompilerTest, LineCoveragePass}
 import firrtl._
 import firrtl.options.Dependency
 import firrtl.stage.RunFirrtlTransformAnnotation

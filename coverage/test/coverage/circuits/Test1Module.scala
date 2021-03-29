@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-package coverage
+package coverage.circuits
 
 import chisel3._
 

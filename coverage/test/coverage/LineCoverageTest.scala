@@ -2,6 +2,7 @@
 
 package coverage
 
+import circuits.Test1Module
 import firrtl.options.Dependency
 import org.scalatest.flatspec.AnyFlatSpec
 import chisel3._
@@ -9,6 +10,7 @@ import chiseltest._
 import chiseltest.experimental.TestOptionBuilder.ChiselScalatestOptionBuilder
 import firrtl.AnnotationSeq
 import firrtl.stage.RunFirrtlTransformAnnotation
+
 
 import java.nio.file.Paths
 

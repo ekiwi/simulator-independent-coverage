@@ -3,6 +3,7 @@
 
 package coverage
 
+import circuits.Test1Module
 import chisel3.tester.experimental.TestOptionBuilder.ChiselScalatestOptionBuilder
 import chiseltest._
 import chiseltest.coverage._

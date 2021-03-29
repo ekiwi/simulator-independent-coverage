@@ -3,12 +3,20 @@ package coverage
 import firrtl._
 import logger.LazyLogging
 import chiseltest.coverage._
+import firrtl.annotations.{ModuleTarget, SingleTargetAnnotation}
 
 import scala.util.matching.Regex
 import scala.collection.mutable
 import java.nio.file._
 import scala.collection.JavaConverters._
 import scala.io.Source
+
+/** Tags a module that should not have any coverage added.
+ *  This annotation should be respected by all automated coverage passes.
+ */
+case class DoNotCoverAnnotation(target: ModuleTarget) extends SingleTargetAnnotation[ModuleTarget] {
+  override def duplicate(n: ModuleTarget) = copy(target=n)
+}
 
 object Coverage {
 
@@ -24,6 +32,11 @@ object Coverage {
       case Seq(one) => one
       case other    => throw new RuntimeException(s"Expected exactly one ModuleInstances annotation, not: $other")
     }
+  }
+
+  def collectModulesToIgnore(state: CircuitState): Set[String] = {
+    val main = state.circuit.main
+    state.annotations.collect { case DoNotCoverAnnotation(target) if target.circuit == main => target.module }.toSet
   }
 
   def path(prefix: String, suffix: String): String = {

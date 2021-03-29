@@ -107,7 +107,8 @@ object LineCoveragePass extends Transform with DependencyAPIMigration {
   override protected def execute(state: CircuitState): CircuitState = {
     val newAnnos = mutable.ListBuffer[Annotation]()
     val c = CircuitTarget(state.circuit.main)
-    val circuit = state.circuit.mapModule(onModule(_, c, newAnnos))
+    val ignoreMods = Coverage.collectModulesToIgnore(state)
+    val circuit = state.circuit.mapModule(onModule(_, c, newAnnos, ignoreMods))
     val annos = newAnnos.toList ++ state.annotations
     CircuitState(circuit, annos)
   }
@@ -118,16 +119,16 @@ object LineCoveragePass extends Transform with DependencyAPIMigration {
     m:         ModuleTarget,
     clk:       ir.Expression)
 
-  private def onModule(m: ir.DefModule, c: CircuitTarget, annos: mutable.ListBuffer[Annotation]): ir.DefModule =
+  private def onModule(m: ir.DefModule, c: CircuitTarget, annos: mutable.ListBuffer[Annotation], ignore: Set[String]): ir.DefModule =
     m match {
-      case e:   ir.ExtModule => e
-      case mod: ir.Module =>
+      case mod: ir.Module if !ignore(mod.name) =>
         val namespace = Namespace(mod)
         namespace.newName(Prefix)
         val ctx = ModuleCtx(annos, namespace, c.module(mod.name), Builder.findClock(mod))
         val bodyInfo = onStmt(mod.body, ctx)
         val body = addCover(bodyInfo, ctx)
         mod.copy(body = body)
+      case other => other
     }
 
   private def onStmt(s: ir.Statement, ctx: ModuleCtx): (ir.Statement, Boolean, Seq[ir.Info]) = s match {

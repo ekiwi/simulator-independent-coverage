@@ -9,8 +9,8 @@ import chisel3._
 import chiseltest._
 import chiseltest.experimental.TestOptionBuilder.ChiselScalatestOptionBuilder
 import firrtl.AnnotationSeq
+import firrtl.annotations.CircuitTarget
 import firrtl.stage.RunFirrtlTransformAnnotation
-
 
 import java.nio.file.Paths
 
@@ -125,5 +125,17 @@ class LineCoverageInstrumentationTest extends AnyFlatSpec with CompilerTest {
     assert(subAs.head.lines.head._1 == "Test1Module.scala")
     val offset = 6
     assert(subAs.head.lines.head._2 == Seq(39).map(_ + offset))
+  }
+
+  it should "ignore modules when they are appropriately annotated" in {
+    val ignore = Seq(DoNotCoverAnnotation(CircuitTarget("Test1Module").module("Test1Module")))
+    val (result, rAnnos) = compile(new Test1Module(withSubmodules = true), "low", ignore)
+    // println(result)
+    // val l = result.split('\n').map(_.trim)
+
+    // we only expect the submodule to have a line coverage annotation
+    val a = rAnnos.collect{ case a: LineCoverageAnnotation => a }
+    assert(a.length == 1)
+    assert(a.head.target.module == "SubModule1")
   }
 }

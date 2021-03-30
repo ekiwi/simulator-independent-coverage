@@ -13,7 +13,12 @@ final class CoverageShellOptions extends RegisteredLibrary {
       longOption = "line-coverage",
       toAnnotationSeq = _ => LineCoverage.annotations,
       helpText = "enable line coverage instrumentation"
-  ),
+    ),
+    new ShellOption[Unit](
+      longOption = "fsm-coverage",
+      toAnnotationSeq = _ => FsmCoverage.annotations,
+      helpText = "enable finite state machine coverage instrumentation"
+    ),
     new ShellOption[String](
       longOption = "do-not-cover",
       toAnnotationSeq = a => Seq(DoNotCoverAnnotation(parseModuleTarget(a))),

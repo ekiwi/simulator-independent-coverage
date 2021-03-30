@@ -1,0 +1,20 @@
+[
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumDefAnnotation",
+    "typeName":"CacheState",
+    "definition":{
+      "Idle":0,
+      "ReadCache":1,
+      "WriteCache":2,
+      "WriteBack":3,
+      "WriteAck":4,
+      "RefillReady":5,
+      "Refill":6
+    }
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"CacheTester.Cache.state",
+    "enumTypeName":"CacheState"
+  },
+]

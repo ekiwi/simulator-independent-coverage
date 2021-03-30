@@ -16,7 +16,7 @@ class FsmCoverageInstrumentationTest extends AnyFlatSpec with CompilerTest {
   override protected def annos = Seq(RunFirrtlTransformAnnotation(Dependency(FsmCoveragePass)))
 
   it should "recognize the FSM" in {
-    val (result, rAnnos) = compile(new FifoRegister(8), "high")
+    val (result, rAnnos) = compile(new FifoRegister(8), "low")
 
     println()
   }

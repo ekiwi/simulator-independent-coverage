@@ -32,7 +32,7 @@ class ReaderIO(size: Int) extends Bundle {
 }
 //- end
 
-object State extends ChiselEnum {
+object FifoState extends ChiselEnum {
   val Empty, Full = Value
 }
 
@@ -46,24 +46,24 @@ class FifoRegister(size: Int) extends Module {
     val deq = new ReaderIO(size)
   })
 
-  val stateReg = RegInit(State.Empty)
+  val stateReg = RegInit(FifoState.Empty)
   val dataReg = RegInit(0.U(size.W))
 
-  when(stateReg === State.Empty) {
+  when(stateReg === FifoState.Empty) {
     when(io.enq.write) {
-      stateReg := State.Full
+      stateReg := FifoState.Full
       dataReg := io.enq.din
     }
-  }.elsewhen(stateReg === State.Full) {
+  }.elsewhen(stateReg === FifoState.Full) {
     when(io.deq.read) {
-      stateReg := State.Empty
+      stateReg := FifoState.Empty
       dataReg := 0.U // just to better see empty slots in the waveform
     }
   }.otherwise {
     // There should not be an otherwise state
   }
 
-  io.enq.full := (stateReg === State.Full)
-  io.deq.empty := (stateReg === State.Empty)
+  io.enq.full := (stateReg === FifoState.Full)
+  io.deq.empty := (stateReg === FifoState.Empty)
   io.deq.dout := dataReg
 }

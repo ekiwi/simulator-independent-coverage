@@ -2309,7 +2309,3 @@ circuit CoreTester :
           node _T_453 = eq(_T_452, UInt<1>("h0")) @[CoreTests.scala 68:13]
           when _T_453 : @[CoreTests.scala 68:13]
             stop(clock, UInt<1>("h1"), 0) @[CoreTests.scala 68:13]
-          node _T_454 = bits(reset, 0, 0) @[CoreTests.scala 68:21]
-          node _T_455 = eq(_T_454, UInt<1>("h0")) @[CoreTests.scala 68:21]
-          when _T_455 : @[CoreTests.scala 68:21]
-            stop(clock, UInt<1>("h1"), 0) @[CoreTests.scala 68:21]

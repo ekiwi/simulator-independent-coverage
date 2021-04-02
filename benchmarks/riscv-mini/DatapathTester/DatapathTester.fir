@@ -2159,7 +2159,3 @@ circuit DatapathTester :
           node _T_195 = eq(_T_194, UInt<1>("h0")) @[DatapathTests.scala 64:13]
           when _T_195 : @[DatapathTests.scala 64:13]
             stop(clock, UInt<1>("h1"), 0) @[DatapathTests.scala 64:13]
-          node _T_196 = bits(reset, 0, 0) @[DatapathTests.scala 64:21]
-          node _T_197 = eq(_T_196, UInt<1>("h0")) @[DatapathTests.scala 64:21]
-          when _T_197 : @[DatapathTests.scala 64:21]
-            stop(clock, UInt<1>("h1"), 0) @[DatapathTests.scala 64:21]

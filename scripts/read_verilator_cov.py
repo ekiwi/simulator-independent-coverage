@@ -30,8 +30,19 @@ def parse_args():
 def show(data):
     print(data)
 
+def signals(data):
+    """ tries to extract the signals which have been instrumented
+    Example:
+        ./read_verilator_cov.py -i verilator_examples/TileTester_per_instance_toggle.dat signals
+    """
+    sigs = [h + "." + o for o, h in zip(data['o'], data['h'])]
+    without_bits = sorted(list({s.split('[')[0] for s in sigs}))
+    print("\n".join(without_bits))
+
+
 commands = {
-    'show': show
+    'show': show,
+    'signals': signals,
 }
 
 def main():

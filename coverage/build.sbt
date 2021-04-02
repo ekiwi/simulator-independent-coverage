@@ -14,6 +14,7 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.6" % Test
 scalaSource in Compile := baseDirectory.value / "src"
 resourceDirectory in Compile := baseDirectory.value / "src" / "resources"
 scalaSource in Test := baseDirectory.value / "test"
+resourceDirectory in Test := baseDirectory.value / "test" / "resources"
 
 // use `sbt assembly` to build a fat jar
 assemblyJarName in assembly := "firrtl.jar"

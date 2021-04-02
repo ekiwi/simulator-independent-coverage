@@ -6,9 +6,14 @@ import pandas as pd
 def load_dat(filename: str):
     with open(filename, 'rb') as f:
         data = f.read()
-    lines = [l[4:-3] for l in data.split(b"\n") if l.startswith(b"C '")]
-    lines = [{e[0]: e[1] for e in (e.split(b"\x02") for e in l.split(b"\x01"))} for l in lines]
-    return pd.DataFrame(lines)
+    lines = [l[4:] for l in data.split(b"\n") if l.startswith(b"C '")]
+    values = []
+    for line in lines:
+        dd, count = line.split(b"'")
+        ees = {e[0].decode('ascii'): e[1].decode('ascii') for e in (e.split(b"\x02") for e in dd.split(b"\x01"))}
+        ees['count'] = int(count.decode('ascii').strip())
+        values.append(ees)
+    return pd.DataFrame(values)
 
 
 def parse_args():

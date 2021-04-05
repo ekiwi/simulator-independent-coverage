@@ -6,11 +6,12 @@ package coverage
 
 import chiseltest.coverage.ModuleInstancesPass
 import coverage.midas.Builder
-import firrtl.annotations.{Annotation, CircuitTarget, ModuleTarget, NoTargetAnnotation, SingleTargetAnnotation}
+import firrtl.annotations.{Annotation, CircuitTarget, MakePresetRegAnnotation, ModuleTarget, NoTargetAnnotation, PresetRegAnnotation, SingleTargetAnnotation}
 import firrtl._
 import firrtl.options.Dependency
 import firrtl.stage.{Forms, RunFirrtlTransformAnnotation}
 import firrtl.stage.TransformManager.TransformDependency
+import firrtl.transforms.PropagatePresetAnnotations
 
 import scala.collection.mutable
 
@@ -35,6 +36,8 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
 
   // we want to run after optimization in order to minimize the number of signals that are left over to instrument
   override def prerequisites: Seq[TransformDependency] = Forms.LowFormOptimized
+  // we add our own registers with presets
+  override def optionalPrerequisites = Seq(Dependency[PropagatePresetAnnotations])
   override def invalidates(a: Transform): Boolean = false
 
   override protected def execute(state: CircuitState): CircuitState = {
@@ -69,10 +72,10 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
         if(signals.isEmpty) { mod } else {
           val namespace = Namespace(mod)
           namespace.newName(Prefix)
-          val clk = Builder.findClock(mod)
-          val (enStmt, en) = buildCoverEnable(clk, Utils.False(), opt.resetAware, namespace)
-          val ctx = ModuleCtx(annos, namespace, c.module(mod.name), en, clk)
-          val coverStmts = signals.map(s => addCover(s, ctx))
+          val ctx = ModuleCtx(annos, namespace, c.module(mod.name), Utils.False(), Builder.findClock(mod))
+          val (enStmt, en) = buildCoverEnable(ctx, opt.resetAware, Utils.False())
+          val ctx2 = ctx.copy(en = en)
+          val coverStmts = signals.map(s => addCover(s, ctx2))
           val body = ir.Block(List(mod.body, enStmt) ++ coverStmts)
           mod.copy(body = body)
         }
@@ -132,16 +135,16 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
   }
   private def getFields(t: ir.Type): Seq[ir.Field] = t.asInstanceOf[ir.BundleType].fields
 
-  private def buildCoverEnable(clk: ir.Expression, reset: ir.Expression, resetAware: Boolean, namespace: Namespace): (ir.Statement, ir.Expression) = {
+  private def buildCoverEnable(ctx: ModuleCtx, resetAware: Boolean, reset: ir.Expression): (ir.Statement, ir.Expression) = {
     assert(!resetAware, "TODO: reset aware")
 
     // we add a simple register in order to disable toggle coverage in the first cycle
-    val name = namespace.newName("enToggle")
-    val reg = ir.DefRegister(ir.NoInfo, name, Utils.BoolType, clk, reset, Utils.False())
+    val name = ctx.namespace.newName("enToggle")
+    val reg = ir.DefRegister(ir.NoInfo, name, Utils.BoolType, ctx.clk, reset, Utils.False())
     val ref = ir.Reference(reg)
     val next = ir.Connect(ir.NoInfo, ref, Utils.True())
-
-    // TODO: add init annotation
+    val presetAnno = MakePresetRegAnnotation(ctx.m.ref(reg.name))
+    ctx.annos.prepend(presetAnno)
 
     (ir.Block(reg, next), ref)
   }

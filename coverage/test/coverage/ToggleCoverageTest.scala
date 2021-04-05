@@ -20,7 +20,7 @@ class ToggleCoverageInstrumentationTest extends AnyFlatSpec with CompilerTest {
   override protected def annos = Seq(RunFirrtlTransformAnnotation(Dependency(ToggleCoveragePass)))
 
   it should "add cover statements" in {
-    val (result, rAnnos) = compile(new Test1Module(), "low")
+    val (result, rAnnos) = compile(new Test1Module(), "sverilog")
     println(result)
     val l = result.split('\n').map(_.trim)
   }

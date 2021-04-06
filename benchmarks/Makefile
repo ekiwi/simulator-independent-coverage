@@ -71,7 +71,7 @@ verilator = verilator -Wno-WIDTH --cc --exe --build
 # https://stackoverflow.com/questions/5618615/check-if-a-program-exists-from-a-makefile
 HYPERFINE := $(shell command -v hyperfine 2> /dev/null)
 
-%_results.csv: %_baseline %_line_native %_toggle_native %_line_firrtl
+%_results.csv: %_baseline %_line_native %_toggle_native %_line_firrtl %_toggle_firrtl
 ifndef HYPERFINE
 	$(error "install hyperfine: https://github.com/sharkdp/hyperfine")
 endif
@@ -82,9 +82,10 @@ baseline_sims = $(patsubst %.fir,%_baseline,$(designs))
 native_line_sims = $(patsubst %.fir,%_line_native,$(designs))
 native_toggle_sims = $(patsubst %.fir,%_toggle_native,$(designs))
 firrtl_line_sims = $(patsubst %.fir,%_line_firrtl,$(designs))
+firrtl_toggle_sims = $(patsubst %.fir,%_toggle_firrtl,$(designs))
 results = $(patsubst %.fir,%_results.csv,$(designs))
 
-build: $(baseline_sims) $(native_line_sims) $(native_toggle_sims) $(firrtl_line_sims)
+build: $(baseline_sims) $(native_line_sims) $(native_toggle_sims) $(firrtl_line_sims) $(firrtl_toggle_sims)
 
 benchmark: $(results)
 
@@ -97,10 +98,12 @@ clean:
 	find . -mindepth 2 -type l -name '*_line_native' -delete;
 	find . -mindepth 2 -type l -name '*_line_firrtl' -delete;
 	find . -mindepth 2 -type l -name '*_toggle_native' -delete;
+	find . -mindepth 2 -type l -name '*_toggle_firrtl' -delete;
 	find . -depth -mindepth 2 -type d -name 'baseline' -exec rm -r {} \;
 	find . -depth -mindepth 2 -type d -name 'line_firrtl' -exec rm -r {} \;
 	find . -depth -mindepth 2 -type d -name 'line_native' -exec rm -r {} \;
 	find . -depth -mindepth 2 -type d -name 'toggle_native' -exec rm -r {} \;
+	find . -depth -mindepth 2 -type d -name 'toggle_firrtl' -exec rm -r {} \;
 
 .PHONY: firrtl clean build benchmark
-.PRECIOUS: %_baseline.sv %_line.sv %.cpp %_baseline %_line_native %_line_firrtl %_toggle_native
+.PRECIOUS: %_baseline.sv %_line.sv %.cpp %_baseline %_line_native %_line_firrtl %_toggle_native %_toggle_firrtl

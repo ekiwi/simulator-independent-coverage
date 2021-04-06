@@ -124,5 +124,29 @@ The increment in `VTileTester__1.cpp` happens in the `VTileTester::_sequent__TOP
 Thus all six signals alias!
 
 
+### Problematic Verilator Coverage Changes
+
+Since we need to patch generated C++ to get per instance coverage,
+we need to potentially work around a whole bunch of recent changes.
+
+[Add simulation context (VerilatedContext)](https://github.com/verilator/verilator/commit/2cad22a22af92c9fb7748cf7062dab798102b16a#diff-e21e4eeae356141891557ef57957194f830c28b0da2c5753745e326d93d695f9)
+```.diff
+- #define VL_COVER_INSERT(countp, ...) \
+-     VL_IF_COVER(VerilatedCov::_inserti(countp); VerilatedCov::_insertf(__FILE__, __LINE__); \
+-                 VerilatedCov::_insertp("hier", name(), __VA_ARGS__))
++ #define VL_COVER_INSERT(covcontextp, countp, ...) \
++     VL_IF_COVER(covcontextp->_inserti(countp); covcontextp->_insertf(__FILE__, __LINE__); \
++                 covcontextp->_insertp("hier", name(), __VA_ARGS__))
+```
+
+[ Line Coverage now tracks all statement lines, not just branch lines](https://github.com/verilator/verilator/commit/a57826b125da79f2f002892f1e01b5da56aea3a9#diff-e21e4eeae356141891557ef57957194f830c28b0da2c5753745e326d93d695f9)
+```.diff
+  void VerilatedCov::_insertp(A(0), A(1), K(2), int val2, K(3), int val3, K(4),
+-                             const std::string& val4, A(5), A(6)) VL_MT_SAFE {
++                             const std::string& val4, A(5), A(6), A(7)) VL_MT_SAFE {
+```
+
+[Modernize va args](https://github.com/verilator/verilator/commit/a1a2650f1e8949d09e2a66d3128fe07cecffaf3b#diff-e21e4eeae356141891557ef57957194f830c28b0da2c5753745e326d93d695f9)
+
 
 

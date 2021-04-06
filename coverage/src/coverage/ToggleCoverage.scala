@@ -6,6 +6,7 @@ package coverage
 
 import chiseltest.coverage.ModuleInstancesPass
 import coverage.midas.Builder
+import coverage.passes.KeepClockAndResetPass
 import firrtl.annotations.{Annotation, CircuitTarget, MakePresetRegAnnotation, ModuleTarget, NoTargetAnnotation, PresetRegAnnotation, SingleTargetAnnotation}
 import firrtl._
 import firrtl.options.Dependency
@@ -31,13 +32,23 @@ case class ToggleCoverageOptions(
   resetAware: Boolean = false, // reset awareness ensures that toggels during reset are ignored
 ) extends NoTargetAnnotation
 
+object AllEmitters {
+  def apply(): Seq[TransformDependency] = Seq(
+    Dependency[VerilogEmitter],
+    Dependency[SystemVerilogEmitter],
+    Dependency[MinimumVerilogEmitter]
+  )
+}
+
 object ToggleCoveragePass extends Transform with DependencyAPIMigration {
   val Prefix = "t"
 
   // we want to run after optimization in order to minimize the number of signals that are left over to instrument
-  override def prerequisites: Seq[TransformDependency] = Forms.LowFormOptimized
+  override def prerequisites: Seq[TransformDependency] = Forms.LowFormOptimized ++ Seq(Dependency(KeepClockAndResetPass))
   // we add our own registers with presets
   override def optionalPrerequisites = Seq(Dependency[PropagatePresetAnnotations])
+  // we want to run before the actual Verilog is emitted
+  override def optionalPrerequisiteOf = AllEmitters()
   override def invalidates(a: Transform): Boolean = false
 
   override protected def execute(state: CircuitState): CircuitState = {

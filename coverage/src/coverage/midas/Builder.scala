@@ -10,14 +10,14 @@ import firrtl._
   * Some of these convenience functions could be moved to firrtl at some point.
   */
 object Builder {
-  def findClock(m: ir.Module): ir.Expression = {
+  def findClock(m: ir.Module): ir.Reference = {
     val clockIO = m.ports.filter(_.tpe == ir.ClockType)
     val clockInputs = clockIO.filter(_.direction == ir.Input)
     assert(clockInputs.length == 1, s"[${m.name}] This transformation only works if there is exactly one clock: $clockInputs")
     ir.Reference(clockInputs.head)
   }
 
-  def findReset(m: ir.Module): ir.Expression = {
+  def findReset(m: ir.Module): ir.Reference = {
     val inputs = m.ports.filter(_.direction == ir.Input)
     val ofResetType = inputs.filter(p => p.tpe == ir.AsyncResetType || p.tpe == ir.ResetType)
     val boolWithCorrectName = inputs.filter(p => p.tpe == ir.UIntType(ir.IntWidth(1)) && p.name == "reset")

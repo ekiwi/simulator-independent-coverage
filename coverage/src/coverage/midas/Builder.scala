@@ -13,7 +13,7 @@ object Builder {
   def findClock(m: ir.Module): ir.Expression = {
     val clockIO = m.ports.filter(_.tpe == ir.ClockType)
     val clockInputs = clockIO.filter(_.direction == ir.Input)
-    assert(clockInputs.length == 1, s"This transformation only works if there is exactly one clock: $clockInputs")
+    assert(clockInputs.length == 1, s"[${m.name}] This transformation only works if there is exactly one clock: $clockInputs")
     ir.Reference(clockInputs.head)
   }
 

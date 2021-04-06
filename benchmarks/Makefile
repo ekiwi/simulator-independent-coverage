@@ -12,6 +12,10 @@ firrtl: $(firrtl_jar)
 	# hack to ignore the top level module
 	$(firrtl_bin) -i $< -E sverilog -o $@ --line-coverage --do-not-cover $(shell head -n 1 $< | cut -d' ' -f 2):$(shell head -n 1 $< | cut -d' ' -f 2)
 
+%_toggle.sv: %.fir $(firrtl_jar)
+	# hack to ignore the top level module
+	$(firrtl_bin) -i $< -E sverilog -o $@ --toggle-coverage --do-not-cover $(shell head -n 1 $< | cut -d' ' -f 2):$(shell head -n 1 $< | cut -d' ' -f 2)
+
 # Testbench top (same for all simulator binaries)
 %.cpp: %.fir template.cpp
 	TOP=$(basename $(notdir $<)) envsubst < template.cpp > $@
@@ -54,6 +58,15 @@ verilator = verilator -Wno-WIDTH --cc --exe --build
 		--top-module $(basename $(notdir $(word 2,$^))) \
 		-Mdir line_firrtl
 	ln -s line_firrtl/V$(subst _line_firrtl,,$(notdir $@)) $@
+
+%_toggle_firrtl: %_toggle.sv %.cpp
+	cd $(dir $(basename $@)) && \
+		$(verilator) --coverage-user \
+		$(notdir $<) \
+		$(notdir $(word 2,$^)) \
+		--top-module $(basename $(notdir $(word 2,$^))) \
+		-Mdir toggle_firrtl
+	ln -s toggle_firrtl/V$(subst _toggle_firrtl,,$(notdir $@)) $@
 
 # https://stackoverflow.com/questions/5618615/check-if-a-program-exists-from-a-makefile
 HYPERFINE := $(shell command -v hyperfine 2> /dev/null)

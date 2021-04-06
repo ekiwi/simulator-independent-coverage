@@ -17,7 +17,7 @@ import scala.collection.mutable
 
 object ToggleCoverage {
   def annotations: AnnotationSeq = Seq(
-    RunFirrtlTransformAnnotation(Dependency(LineCoveragePass)),
+    RunFirrtlTransformAnnotation(Dependency(ToggleCoveragePass)),
     RunFirrtlTransformAnnotation(Dependency(ModuleInstancesPass))
   )
 }

@@ -4,10 +4,10 @@
 
 package coverage
 
-import chiseltest.coverage.ModuleInstancesPass
+import chiseltest.coverage.{CoverageInfo, ModuleInstancesPass}
 import coverage.midas.Builder
 import coverage.passes.KeepClockAndResetPass
-import firrtl.annotations.{Annotation, CircuitTarget, MakePresetRegAnnotation, ModuleTarget, NoTargetAnnotation, PresetRegAnnotation, SingleTargetAnnotation}
+import firrtl.annotations.{Annotation, CircuitTarget, MakePresetRegAnnotation, ModuleTarget, NoTargetAnnotation, PresetRegAnnotation, ReferenceTarget, SingleTargetAnnotation}
 import firrtl._
 import firrtl.options.Dependency
 import firrtl.stage.{Forms, RunFirrtlTransformAnnotation}
@@ -38,6 +38,12 @@ object AllEmitters {
     Dependency[SystemVerilogEmitter],
     Dependency[MinimumVerilogEmitter]
   )
+}
+
+case class ToggleCoverageAnnotation(target: ReferenceTarget, module: String, signal: String, bit: Int)
+  extends SingleTargetAnnotation[ReferenceTarget]
+    with CoverageInfo {
+  override def duplicate(n: ReferenceTarget) = copy(target = n)
 }
 
 object ToggleCoveragePass extends Transform with DependencyAPIMigration {
@@ -174,10 +180,10 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
       val name = ctx.namespace.newName(Prefix)
       val pred = ir.DoPrim(firrtl.PrimOps.Bits, List(didToggle), List(ii, ii), Utils.BoolType)
       val cover = ir.Verification(ir.Formal.Cover, signal.info, ctx.clk, pred, ctx.en, ir.StringLit(""), name)
+      val anno = ToggleCoverageAnnotation(ctx.m.ref(name), ctx.m.module, signal.ref.serialize, ii)
+      ctx.annos.prepend(anno)
       (name, cover)
     }
-
-    // TODO: create annotation
 
     val stmts = prevStmt ++ Seq(didToggleNode) ++ covers.map(_._2)
     ir.Block(stmts)

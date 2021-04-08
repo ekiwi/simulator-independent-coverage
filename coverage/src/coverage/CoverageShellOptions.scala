@@ -6,6 +6,7 @@ package coverage
 
 import firrtl.annotations.{CircuitTarget, ModuleTarget}
 import firrtl.options._
+import firrtl.stage.RunFirrtlTransformAnnotation
 
 final class CoverageShellOptions extends RegisteredLibrary {
   override def name = "Coverage"
@@ -13,37 +14,37 @@ final class CoverageShellOptions extends RegisteredLibrary {
   override def options = Seq(
     new ShellOption[Unit](
       longOption = "line-coverage",
-      toAnnotationSeq = _ => LineCoverage.annotations,
+      toAnnotationSeq = _ => LineCoverage.annotations ++ Common,
       helpText = "enable line coverage instrumentation"
     ),
     new ShellOption[Unit](
       longOption = "fsm-coverage",
-      toAnnotationSeq = _ => FsmCoverage.annotations,
+      toAnnotationSeq = _ => FsmCoverage.annotations ++ Common,
       helpText = "enable finite state machine coverage instrumentation"
     ),
     new ShellOption[Unit](
       longOption = "toggle-coverage",
-      toAnnotationSeq = _ => ToggleCoverage.all,
+      toAnnotationSeq = _ => ToggleCoverage.all ++ Common,
       helpText = "enable toggle coverage instrumentation for all signals"
     ),
     new ShellOption[Unit](
       longOption = "toggle-coverage-ports",
-      toAnnotationSeq = _ => ToggleCoverage.ports,
+      toAnnotationSeq = _ => ToggleCoverage.ports ++ Common,
       helpText = "enable toggle coverage instrumentation for all I/O ports"
     ),
     new ShellOption[Unit](
       longOption = "toggle-coverage-registers",
-      toAnnotationSeq = _ => ToggleCoverage.registers,
+      toAnnotationSeq = _ => ToggleCoverage.registers ++ Common,
       helpText = "enable toggle coverage instrumentation for all registers"
     ),
     new ShellOption[Unit](
       longOption = "toggle-coverage-memories",
-      toAnnotationSeq = _ => ToggleCoverage.memories,
+      toAnnotationSeq = _ => ToggleCoverage.memories ++ Common,
       helpText = "enable toggle coverage instrumentation for all memory ports"
     ),
     new ShellOption[Unit](
       longOption = "toggle-coverage-wires",
-      toAnnotationSeq = _ => ToggleCoverage.wires,
+      toAnnotationSeq = _ => ToggleCoverage.wires ++ Common,
       helpText = "enable toggle coverage instrumentation for all wires"
     ),
     new ShellOption[String](
@@ -61,4 +62,6 @@ final class CoverageShellOptions extends RegisteredLibrary {
       case _ => throw new RuntimeException(s"Expected format: <circuit:module>, not: $a")
     }
   }
+
+  private val Common = Seq(RunFirrtlTransformAnnotation(Dependency(CoverageStatisticsPass)))
 }

@@ -15,8 +15,11 @@ import scala.collection.mutable
  *  @note right now this isn't an actual firrtl pass, but an analysis called into from a firrtl pass.
  */
 object AliasAnalysis {
+  type Aliases = Seq[List[String]]
+  type Result = Map[String, Aliases]
+
   /** @return map from module name to signals in the module that alias */
-  def findAliases(c: ir.Circuit): Map[String, Seq[List[String]]] = {
+  def findAliases(c: ir.Circuit): Result = {
     // analyze each module in isolation
     val local = c.modules.map(m => m.name -> findAliases(m)).toMap
 

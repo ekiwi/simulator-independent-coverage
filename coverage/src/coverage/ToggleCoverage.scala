@@ -9,7 +9,6 @@ import coverage.midas.Builder
 import coverage.passes.{AliasAnalysis, KeepClockAndResetPass}
 import firrtl.annotations.{Annotation, CircuitTarget, MakePresetRegAnnotation, ModuleTarget, NoTargetAnnotation, PresetRegAnnotation, ReferenceTarget, SingleTargetAnnotation}
 import firrtl._
-import firrtl.analyses.InstanceKeyGraph
 import firrtl.options.Dependency
 import firrtl.stage.{Forms, RunFirrtlTransformAnnotation}
 import firrtl.stage.TransformManager.TransformDependency
@@ -199,21 +198,17 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
 
     val groups = signalGroups ++ nonAliasedSignals
     val stmts = groups.flatMap { g =>
-      // find signals which the user requested to be covered
-      val filtered = filterSignals(g, opt)
-      if(filtered.nonEmpty) {
-        // see if this group includes a port
-        val hasPort = g.exists(s => getKind(s.ref) == PortKind)
+      // see if this group includes a port
+      val hasPort = g.exists(s => getKind(s.ref) == PortKind)
 
-        // if we cover ports, then we might ignore this group as it will get covered in the module above ours
-        val skipPort = opt.instrumentPorts && hasPort && !isTop
-        if(!skipPort) {
-          // cover one of the signals in the group
-          val (stmt, names) = addCover(filtered.head, ctx)
-          // add annotations for all
-          addAnno(g, names, ctx)
-          Some(stmt)
-        } else { None }
+      // if we cover ports, then we might ignore this group as it will get covered in the module above ours
+      val skipPort = hasPort && !isTop
+      if(!skipPort) {
+        // cover one of the signals in the group
+        val (stmt, names) = addCover(g.head, ctx)
+        // add annotations for all
+        addAnno(g, names, ctx)
+        Some(stmt)
       } else { None }
     }
 

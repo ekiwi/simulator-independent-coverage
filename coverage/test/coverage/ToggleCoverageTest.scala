@@ -87,8 +87,7 @@ class ToggleCoverageInstrumentationTest extends AnyFlatSpec with CompilerTest {
     // We expect there to be only a single `reg enToggle` because there should be
     // no cover statements in the child module since all signals are exposed on the IOs.
     val enToggleLines = l.filter(_.contains("reg enToggle"))
-    // TODO
-    // assert(enToggleLines.length == 1, enToggleLines.mkString("\n"))
+    assert(enToggleLines.length == 1, enToggleLines.mkString("\n"))
   }
 
   private def refToString(r: ReferenceTarget): String =

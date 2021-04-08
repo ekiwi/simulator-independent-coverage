@@ -83,9 +83,12 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
     CircuitState(circuit, annos)
   }
 
-  private def resolvePortAliases(c: CircuitTarget, annos: Annos, aliases: Map[String, PortAliases], iGraph: InstanceKeyGraph): Unit = {
+  private def resolvePortAliases(c: CircuitTarget, annos: Annos, iAliases: Map[String, PortAliases], iGraph: InstanceKeyGraph): Unit = {
     val signalToAnnoIds: Map[String, Seq[Int]] =
       annos.zipWithIndex.flatMap{ case (a, i) => a.signals.map(s => s.toString() -> i) }.groupBy(_._1).mapValues(_.map(_._2))
+
+    // make alias table mutable, so that we can propagate aliase up the hierarchy
+    val aliases = mutable.HashMap[String, PortAliases]() ++ iAliases
 
     // go through modules top to bottom
     val moduleOrderBottomUp = iGraph.moduleOrder.reverseIterator
@@ -93,15 +96,24 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
 
     moduleOrderBottomUp.foreach { m =>
       val mTarget = c.module(m.name)
+      val localSignalToPort = aliases(m.name).flatMap{ case (port, signals) => signals.map(_.toString() -> port) }.toMap
       // look at all instances in this module and check to see if any of them have declared part aliases
       childInstances(m.name).foreach { child =>
         val as = aliases.getOrElse(child.module, List())
         as.foreach { case (port, signals) =>
           val portKey = mTarget.ref(child.name).field(port).toString()
-          val annoIds = signalToAnnoIds.getOrElse(portKey, throw new NotImplementedError("TODO"))
-          annoIds.foreach { aId =>
-            val old = annos(aId)
-            annos(aId) = old.copy(signals = old.signals ++ signals)
+          signalToAnnoIds.get(portKey) match {
+            case Some(annoIds) =>
+              annoIds.foreach { aId =>
+                val old = annos(aId)
+                annos(aId) = old.copy(signals = old.signals ++ signals)
+              }
+            case None =>
+              // if there are no annotations for this signal, we know that the signal is actually sampled
+              // even further up the hierarchy
+              val localPort = localSignalToPort(portKey)
+              val prev = aliases.getOrElse(m.name, List())
+              aliases(m.name) =  (localPort, signals) +: prev
           }
         }
       }

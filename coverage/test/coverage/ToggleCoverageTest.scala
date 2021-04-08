@@ -35,6 +35,12 @@ class ToggleTestChild extends Module {
   val out1 = IO(Output(UInt(8.W)))
   out0 := in
   out1 := RegNext(in)
+  val g0 = Module(new ToggleTestGrandChild)
+  dontTouch(g0.reset)
+}
+
+class ToggleTestGrandChild extends Module {
+  // empty, just has a reset
 }
 
 class ToggleCoverageInstrumentationTest extends AnyFlatSpec with CompilerTest {
@@ -57,9 +63,13 @@ class ToggleCoverageInstrumentationTest extends AnyFlatSpec with CompilerTest {
 
     // we expect the covered signals to be the following
     val expected = List(
-      "ToggleTestChild.REG", "ToggleTestChild.in",
+      // all signals in the ToggleTestChild module
+      "ToggleTestChild.REG", "ToggleTestChild.g0.reset", "ToggleTestChild.in",
       "ToggleTestChild.out0", "ToggleTestChild.out1",
       "ToggleTestChild.reset",
+      // all signals in the ToggleTestGrandChild module
+      "ToggleTestGrandChild.reset",
+      // all signals in the ToggleTestModule module
       "ToggleTestModule.c0.in", "ToggleTestModule.c0.out0",
       "ToggleTestModule.c0.out1", "ToggleTestModule.c0.reset",
       "ToggleTestModule.in", "ToggleTestModule.out0",

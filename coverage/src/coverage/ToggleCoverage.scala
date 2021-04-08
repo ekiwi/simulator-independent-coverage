@@ -9,6 +9,7 @@ import coverage.midas.Builder
 import coverage.passes.{AliasAnalysis, KeepClockAndResetPass}
 import firrtl.annotations.{Annotation, CircuitTarget, MakePresetRegAnnotation, ModuleTarget, NoTargetAnnotation, PresetRegAnnotation, ReferenceTarget, SingleTargetAnnotation}
 import firrtl._
+import firrtl.analyses.InstanceKeyGraph
 import firrtl.options.Dependency
 import firrtl.stage.{Forms, RunFirrtlTransformAnnotation}
 import firrtl.stage.TransformManager.TransformDependency
@@ -29,7 +30,7 @@ case class ToggleCoverageOptions(
   instrumentMemories: Boolean = true,
   instrumentSignals: Boolean = true,
   maxWidth: Int = 200,
-  resetAware: Boolean = false, // reset awareness ensures that toggels during reset are ignored
+  resetAware: Boolean = false, // reset awareness ensures that toggles during reset are ignored
 ) extends NoTargetAnnotation
 
 object AllEmitters {
@@ -65,25 +66,61 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
     val ignoreMods = Coverage.collectModulesToIgnore(state)
 
     // collect global alias information
-    val aliases = AliasAnalysis.findAliases(state.circuit)
+    val iGraph = InstanceKeyGraph(state.circuit)
+    val aliases = AliasAnalysis.findAliases(state.circuit, iGraph)
 
-    // instrument
-    val newAnnos = mutable.ListBuffer[Annotation]()
+    // we first instrument each module in isolation
+    val newAnnos = new Annos()
     val c = CircuitTarget(state.circuit.main)
-    val circuit = state.circuit.mapModule(m => onModule(m, c, newAnnos, ignoreMods, opt, aliases(m.name)))
-    val annos = newAnnos.toList ++ state.annotations
+    val ms = state.circuit.modules.map(m => onModule(m, c, newAnnos, ignoreMods, opt, aliases(m.name)))
+    val circuit = state.circuit.copy(modules = ms.map(_._1))
+
+    // as a second step we add information to our annotations for signals that cross module boundaries
+    val portAliases = ms.map { case (m,a,_) => m.name -> a }.toMap
+    resolvePortAliases(c, newAnnos, portAliases, iGraph)
+
+    val annos = newAnnos ++ ms.flatMap(_._3).toList ++ state.annotations
     CircuitState(circuit, annos)
   }
 
+  private def resolvePortAliases(c: CircuitTarget, annos: Annos, aliases: Map[String, PortAliases], iGraph: InstanceKeyGraph): Unit = {
+    val signalToAnnoIds: Map[String, Seq[Int]] =
+      annos.zipWithIndex.flatMap{ case (a, i) => a.signals.map(s => s.toString() -> i) }.groupBy(_._1).mapValues(_.map(_._2))
+
+    // go through modules top to bottom
+    val moduleOrderBottomUp = iGraph.moduleOrder.reverseIterator
+    val childInstances = iGraph.getChildInstances.toMap
+
+    moduleOrderBottomUp.foreach { m =>
+      val mTarget = c.module(m.name)
+      // look at all instances in this module and check to see if any of them have declared part aliases
+      childInstances(m.name).foreach { child =>
+        val as = aliases.getOrElse(child.module, List())
+        as.foreach { case (port, signals) =>
+          val portKey = mTarget.ref(child.name).field(port).toString()
+          val annoIds = signalToAnnoIds.getOrElse(portKey, throw new NotImplementedError("TODO"))
+          annoIds.foreach { aId =>
+            val old = annos(aId)
+            annos(aId) = old.copy(signals = old.signals ++ signals)
+          }
+        }
+      }
+    }
+  }
+
+  private type Annos = mutable.ArrayBuffer[ToggleCoverageAnnotation]
   private case class ModuleCtx(
-    annos:     mutable.ListBuffer[Annotation],
+    annos:     Annos,
     namespace: Namespace,
     m:         ModuleTarget,
     en:        ir.Reference,
     clk:       ir.Expression)
 
-  private def onModule(m: ir.DefModule, c: CircuitTarget, annos: mutable.ListBuffer[Annotation], ignore: Set[String],
-    opt: ToggleCoverageOptions, aliases: AliasAnalysis.Aliases): ir.DefModule =
+  // map from port name to signals associated with that port
+  private type PortAliases = Seq[(String, Seq[ReferenceTarget])]
+
+  private def onModule(m: ir.DefModule, c: CircuitTarget, annos: Annos, ignore: Set[String],
+    opt: ToggleCoverageOptions, aliases: AliasAnalysis.Aliases): (ir.DefModule, PortAliases, Option[Annotation]) =
     m match {
       case mod: ir.Module if !ignore(mod.name) =>
         // first we check to see which signals we want to cover
@@ -91,21 +128,21 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
         val allSignals = collectSignals(mod)
         val signals = filterSignals(allSignals, opt)
 
-        if(signals.isEmpty) { mod } else {
+        if(signals.isEmpty) { (mod, List(), None) } else {
           val namespace = Namespace(mod)
           namespace.newName(Prefix)
           // create a module wide signal that indicates whether the toggle coverage is active
           val en = ir.Reference(namespace.newName("enToggle"), Utils.BoolType, RegKind, UnknownFlow)
           val ctx = ModuleCtx(annos, namespace, c.module(mod.name), en, Builder.findClock(mod))
-          val coverStmts = coverSignals(signals, aliases, ctx, opt, isTop)
+          val (coverStmts, portAliases) = coverSignals(signals, aliases, ctx, isTop)
           if(coverStmts.nonEmpty) {
             // create actual hardware to generate enable signal
-            val enStmt = buildCoverEnable(ctx, opt.resetAware)
+            val (enStmt, enAnno) = buildCoverEnable(ctx, opt.resetAware)
             val body = ir.Block(mod.body, enStmt, ir.Block(coverStmts))
-            mod.copy(body = body)
-          } else { mod }
+            (mod.copy(body = body), portAliases, Some(enAnno))
+          } else { (mod, portAliases, None) }
         }
-      case other => other
+      case other => (other, List(), None)
     }
 
   private type Signals = Seq[Signal]
@@ -172,7 +209,7 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
   }
   private def getFields(t: ir.Type): Seq[ir.Field] = t.asInstanceOf[ir.BundleType].fields
 
-  private def buildCoverEnable(ctx: ModuleCtx, resetAware: Boolean): ir.Statement = {
+  private def buildCoverEnable(ctx: ModuleCtx, resetAware: Boolean): (ir.Statement, Annotation) = {
     assert(!resetAware, "TODO: reset aware")
 
     // we add a simple register in order to disable toggle coverage in the first cycle
@@ -180,12 +217,12 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
     val reg = ir.DefRegister(ir.NoInfo, ref.name, Utils.BoolType, ctx.clk, Utils.False(), Utils.False())
     val next = ir.Connect(ir.NoInfo, ref, Utils.True())
     val presetAnno = MakePresetRegAnnotation(ctx.m.ref(reg.name))
-    ctx.annos.prepend(presetAnno)
 
-    ir.Block(reg, next)
+    (ir.Block(reg, next), presetAnno)
   }
 
-  private def coverSignals(signals: Signals, aliases: AliasAnalysis.Aliases, ctx: ModuleCtx, opt: ToggleCoverageOptions, isTop: Boolean): Seq[ir.Statement] = {
+  private def coverSignals(signals: Signals, aliases: AliasAnalysis.Aliases, ctx: ModuleCtx, isTop: Boolean):
+  (Seq[ir.Statement], PortAliases) = {
     // first we group the signals using the alias information
     val signalsByName = signals.map(s => s.name -> s).toMap
     val aliased = mutable.HashSet[String]()
@@ -200,9 +237,11 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
     val nonAliasedSignals = signals.filterNot(s => aliased(s.name)).map(s => List(s))
 
     val groups = signalGroups ++ nonAliasedSignals
+    val portAliases = mutable.ListBuffer[(String, Seq[ReferenceTarget])]()
     val stmts = groups.flatMap { g =>
       // see if this group includes a port
-      val hasPort = g.exists(s => getKind(s.ref) == PortKind)
+      val ports = g.filter(s => getKind(s.ref) == PortKind)
+      val hasPort = ports.nonEmpty
 
       // if we cover ports, then we might ignore this group as it will get covered in the module above ours
       val skipPort = hasPort && !isTop
@@ -212,10 +251,16 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
         // add annotations for all
         addAnno(g, names, ctx)
         Some(stmt)
-      } else { None }
+      } else {
+        // We remember the signals that alias with the port so that they can be added to the annotation
+        // in a module further up the hierarchy.
+        val signalTargets = g.map(s => refToTarget(ctx.m, s.ref)).toList
+        portAliases.prepend(ports.head.name-> signalTargets)
+        None
+      }
     }
 
-    stmts
+    (stmts, portAliases.toList)
   }
 
   private def addAnno(signals: Signals, names: Seq[String], ctx: ModuleCtx): Unit = {

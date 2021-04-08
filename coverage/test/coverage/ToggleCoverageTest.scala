@@ -67,8 +67,7 @@ class ToggleCoverageInstrumentationTest extends AnyFlatSpec with CompilerTest {
     )
 
     val coverNames = annos.flatMap { a => a.signals.map(refToString) }.distinct.sorted
-    // TODO
-    //assert(coverNames == expected)
+    assert(coverNames == expected)
 
 
     // Check how many how many cover statements there are

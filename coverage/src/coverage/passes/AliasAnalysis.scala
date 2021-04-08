@@ -19,12 +19,11 @@ object AliasAnalysis {
   type Result = Map[String, Aliases]
 
   /** @return map from module name to signals in the module that alias */
-  def findAliases(c: ir.Circuit): Result = {
+  def findAliases(c: ir.Circuit, iGraph: InstanceKeyGraph): Result = {
     // analyze each module in isolation
     val local = c.modules.map(m => m.name -> findAliases(m)).toMap
 
     // compute global results
-    val iGraph = InstanceKeyGraph(c)
     val moduleOrderBottomUp = iGraph.moduleOrder.reverseIterator
     val childInstances = iGraph.getChildInstances.toMap
     val portAliases = mutable.HashMap[String, PortAliases]()

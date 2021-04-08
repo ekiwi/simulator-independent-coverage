@@ -55,7 +55,7 @@ class ToggleCoverageInstrumentationTest extends AnyFlatSpec with CompilerTest {
   }
 
   it should "only create one counter when there are obvious aliases" in {
-    val (result, rAnnos) = compile(new ToggleTestModule(), "low")
+    val (result, rAnnos) = compile(new ToggleTestModule(), "low", a = ToggleCoverage.all)
     // println(result)
     val l = result.split('\n').map(_.trim)
 

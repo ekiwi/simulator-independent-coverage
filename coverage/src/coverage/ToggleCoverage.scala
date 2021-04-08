@@ -18,20 +18,23 @@ import firrtl.transforms.PropagatePresetAnnotations
 import scala.collection.mutable
 
 object ToggleCoverage {
-  def annotations: AnnotationSeq = Seq(
-    RunFirrtlTransformAnnotation(Dependency(ToggleCoveragePass)),
-    RunFirrtlTransformAnnotation(Dependency(ModuleInstancesPass))
-  )
+  def passes: Seq[TransformDependency] = Seq(Dependency(ToggleCoveragePass), Dependency(ModuleInstancesPass))
+  def all: AnnotationSeq = Seq(PortToggleCoverage, RegisterToggleCoverage, MemoryToggleCoverage, WireToggleCoverage) ++ passAnnos
+  def ports: AnnotationSeq = Seq(PortToggleCoverage) ++ passAnnos
+  def registers: AnnotationSeq = Seq(RegisterToggleCoverage) ++ passAnnos
+  def memories: AnnotationSeq = Seq(MemoryToggleCoverage) ++ passAnnos
+  def wires: AnnotationSeq = Seq(WireToggleCoverage) ++ passAnnos
+  private def passAnnos = passes.map(p => RunFirrtlTransformAnnotation(p))
 }
 
-case class ToggleCoverageOptions(
-  instrumentPorts: Boolean = true,
-  instrumentRegisters: Boolean = true,
-  instrumentMemories: Boolean = true,
-  instrumentSignals: Boolean = true,
-  maxWidth: Int = 200,
-  resetAware: Boolean = false, // reset awareness ensures that toggles during reset are ignored
-) extends NoTargetAnnotation
+/** enables coverage of all I/O ports in the design */
+case object PortToggleCoverage extends NoTargetAnnotation
+/** enables coverage of all register signals in the design */
+case object RegisterToggleCoverage extends NoTargetAnnotation
+/** enables coverage of all memory port signals in the design */
+case object MemoryToggleCoverage extends NoTargetAnnotation
+/** enables coverage of all wires in the design */
+case object WireToggleCoverage extends NoTargetAnnotation
 
 object AllEmitters {
   def apply(): Seq[TransformDependency] = Seq(
@@ -58,11 +61,31 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
   override def optionalPrerequisiteOf = AllEmitters()
   override def invalidates(a: Transform): Boolean = false
 
+  private case class Options (
+    instrumentPorts: Boolean = false,
+    instrumentRegisters: Boolean = false,
+    instrumentMemories: Boolean = false,
+    instrumentWires: Boolean = false,
+    maxWidth: Int = 200,
+    resetAware: Boolean = false, // reset awareness ensures that toggles during reset are ignored
+  ) {
+    def noCoverage: Boolean = !instrumentPorts && !instrumentRegisters && !instrumentMemories && !instrumentWires
+  }
+
+  private def collectOptions(annos: AnnotationSeq): Options = Options(
+    instrumentPorts = annos.contains(PortToggleCoverage),
+    instrumentRegisters = annos.contains(RegisterToggleCoverage),
+    instrumentMemories = annos.contains(MemoryToggleCoverage),
+    instrumentWires = annos.contains(WireToggleCoverage)
+  )
+
   override protected def execute(state: CircuitState): CircuitState = {
     // collect options and modules to ignore
-    val opts = state.annotations.collect { case a: ToggleCoverageOptions => a }
-    require(opts.size < 2, s"Multiple options: $opts")
-    val opt = opts.headOption.getOrElse(ToggleCoverageOptions())
+    val opt = collectOptions(state.annotations)
+    if(opt.noCoverage) {
+      logger.info("[ToggleCoverage] nothing to do since no coverage options were specified")
+      return state
+    }
     val ignoreMods = Coverage.collectModulesToIgnore(state)
 
     // collect global alias information
@@ -132,7 +155,7 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
   private type PortAliases = Seq[(String, Seq[ReferenceTarget])]
 
   private def onModule(m: ir.DefModule, c: CircuitTarget, annos: Annos, ignore: Set[String],
-    opt: ToggleCoverageOptions, aliases: AliasAnalysis.Aliases): (ir.DefModule, PortAliases, Option[Annotation]) =
+    opt: Options, aliases: AliasAnalysis.Aliases): (ir.DefModule, PortAliases, Option[Annotation]) =
     m match {
       case mod: ir.Module if !ignore(mod.name) =>
         // first we check to see which signals we want to cover
@@ -162,7 +185,7 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
     def name: String = ref.serialize
   }
 
-  private def filterSignals(signals: Signals, opt: ToggleCoverageOptions): Signals = signals.filter { sig =>
+  private def filterSignals(signals: Signals, opt: Options): Signals = signals.filter { sig =>
     val tpeCheck = sig.ref.tpe match {
       case ir.UIntType(ir.IntWidth(w)) => w <= opt.maxWidth
       case ir.SIntType(ir.IntWidth(w)) => w <= opt.maxWidth
@@ -172,8 +195,8 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
     val kindCheck = getKind(sig.ref) match {
       case MemKind => opt.instrumentMemories
       case RegKind => opt.instrumentRegisters
-      case WireKind => opt.instrumentSignals
-      case NodeKind => opt.instrumentSignals
+      case WireKind => opt.instrumentWires
+      case NodeKind => opt.instrumentWires
       case PortKind => opt.instrumentPorts
       case InstanceKind => opt.instrumentPorts
       case other => throw new NotImplementedError(s"Unexpected signal kind: $other")

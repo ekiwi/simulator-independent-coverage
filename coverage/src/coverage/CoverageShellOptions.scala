@@ -23,8 +23,28 @@ final class CoverageShellOptions extends RegisteredLibrary {
     ),
     new ShellOption[Unit](
       longOption = "toggle-coverage",
-      toAnnotationSeq = _ => ToggleCoverage.annotations,
-      helpText = "enable toggle coverage instrumentation"
+      toAnnotationSeq = _ => ToggleCoverage.all,
+      helpText = "enable toggle coverage instrumentation for all signals"
+    ),
+    new ShellOption[Unit](
+      longOption = "toggle-coverage-ports",
+      toAnnotationSeq = _ => ToggleCoverage.ports,
+      helpText = "enable toggle coverage instrumentation for all I/O ports"
+    ),
+    new ShellOption[Unit](
+      longOption = "toggle-coverage-registers",
+      toAnnotationSeq = _ => ToggleCoverage.registers,
+      helpText = "enable toggle coverage instrumentation for all registers"
+    ),
+    new ShellOption[Unit](
+      longOption = "toggle-coverage-memories",
+      toAnnotationSeq = _ => ToggleCoverage.memories,
+      helpText = "enable toggle coverage instrumentation for all memory ports"
+    ),
+    new ShellOption[Unit](
+      longOption = "toggle-coverage-wires",
+      toAnnotationSeq = _ => ToggleCoverage.wires,
+      helpText = "enable toggle coverage instrumentation for all wires"
     ),
     new ShellOption[String](
       longOption = "do-not-cover",

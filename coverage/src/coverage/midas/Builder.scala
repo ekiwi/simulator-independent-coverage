@@ -80,4 +80,11 @@ object Builder {
     case ir.AsyncResetType => true
     case _                 => false
   }
+
+  def getKind(ref: ir.RefLikeExpression): firrtl.Kind = ref match {
+    case ir.Reference(_, _, kind, _) => kind
+    case ir.SubField(expr, _, _, _) => getKind(expr.asInstanceOf[ir.RefLikeExpression])
+    case ir.SubIndex(expr, _, _, _) => getKind(expr.asInstanceOf[ir.RefLikeExpression])
+    case ir.SubAccess(expr, _, _, _) => getKind(expr.asInstanceOf[ir.RefLikeExpression])
+  }
 }

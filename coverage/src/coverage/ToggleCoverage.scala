@@ -25,7 +25,20 @@ object ToggleCoverage {
   def memories: AnnotationSeq = Seq(MemoryToggleCoverage) ++ passAnnos
   def wires: AnnotationSeq = Seq(WireToggleCoverage) ++ passAnnos
   private def passAnnos = passes.map(p => RunFirrtlTransformAnnotation(p))
+
+  def processCoverage(annos: AnnotationSeq): ToggleCoverageData = {
+    val cov = Coverage.collectTestCoverage(annos).toMap
+    val moduleToInst = Coverage.collectModuleInstances(annos).groupBy(_._2).mapValues(_.map(_._1))
+    val infos = annos.collect { case a: ToggleCoverageAnnotation => a }
+
+
+
+    ???
+  }
 }
+
+//                                         instance, module,       signal,      bit, count
+case class ToggleCoverageData(inst: Seq[((String, String), Seq[(String, Seq[(Int, Long)])])])
 
 /** enables coverage of all I/O ports in the design */
 case object PortToggleCoverage extends NoTargetAnnotation

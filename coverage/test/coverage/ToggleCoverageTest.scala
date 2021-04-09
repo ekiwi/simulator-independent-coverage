@@ -4,17 +4,16 @@
 
 package coverage
 
+import circuits.Test1Module
 import chisel3._
-import chiseltest.ChiselScalatestTester
-import coverage.circuits.Test1Module
+import chiseltest._
+import chiseltest.experimental.TestOptionBuilder.ChiselScalatestOptionBuilder
+import chiseltest.internal.{VerilatorBackendAnnotation, WriteVcdAnnotation}
+import firrtl.AnnotationSeq
 import firrtl.annotations.{CircuitTarget, ReferenceTarget}
 import firrtl.options.Dependency
 import firrtl.stage.RunFirrtlTransformAnnotation
 import org.scalatest.flatspec.AnyFlatSpec
-
-
-class ToggleCoverageTest extends AnyFlatSpec with ChiselScalatestTester {
-}
 
 class ToggleTestModule extends Module {
   val in = IO(Input(UInt(8.W)))
@@ -43,8 +42,42 @@ class ToggleTestGrandChild extends Module {
   // empty, just has a reset
 }
 
-class ToggleCoverageInstrumentationTest extends AnyFlatSpec with CompilerTest {
+class ToggleCoverageTest extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "ToggleCoverage"
+
+  it should "parse the results from the simulator" ignore {
+    val r = runTest()
+
+    val data = ToggleCoverage.processCoverage(r)
+    assert(data.inst.length == 1 + 1 + 1)
+
+    // there are three instances that have been covered
+    assert(data.inst.map(_._1._1).sorted == List("", "c0", "c0.g0"))
+
+    // there are three modules that have been covered
+    assert(data.inst.map(_._1._2).distinct.sorted ==
+      List("ToggleTestChild", "ToggleTestGrandChild", "ToggleTestModule"))
+  }
+
+  private def runTest(): AnnotationSeq = {
+    val r = test(new ToggleTestModule()).withAnnotations(WriteVcdAnnotation +: ToggleCoverage.all) { dut =>
+      // stepping without togelling should not change anything
+      (0 until 4).foreach { _ => dut.clock.step() }
+
+      // we toggle some select bits
+      val bits = Seq(0, 3, 5, 7)
+
+      bits.foreach { b =>
+        dut.in.poke((BigInt(1) << b).U)
+        dut.clock.step()
+      }
+    }
+    r.getAnnotationSeq
+  }
+}
+
+class ToggleCoverageInstrumentationTest extends AnyFlatSpec with CompilerTest {
+  behavior of "ToggleCoverage Instrumentation"
 
   override protected def annos = Seq(RunFirrtlTransformAnnotation(Dependency(ToggleCoveragePass)))
 

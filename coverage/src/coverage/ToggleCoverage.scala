@@ -226,7 +226,6 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
     case i: ir.DefInstance => instRefs(i)
     case ir.Block(stmts) => stmts.flatMap(collectSignals)
     case ir.Conditionally(_, _, conseq, alt) => List(conseq, alt).flatMap(collectSignals)
-    case _: ir.DefInstance => List() // we ignore instances since their ports will be covered inside of them
     case _ => List()
   }
   private def isTemp(name: String): Boolean = name.startsWith("_")

@@ -77,8 +77,9 @@ jobs:
       - name: Compile some benchmarks
         run: |
           cd benchmarks
-          make riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_line_firrtl
+          make LL=info riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_line_firrtl
           make riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_line_native
+          make LL=info riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_toggle_firrtl
           make riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_toggle_native
 
   # Sentinel job to simplify how we specify which checks need to pass in branch

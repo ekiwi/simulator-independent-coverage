@@ -24,28 +24,32 @@ object CoverageStatisticsPass extends Transform with DependencyAPIMigration {
   override def invalidates(a: Transform) = false
 
   override def execute(state: CircuitState): CircuitState = {
-    analysis.foreach(a => a(state.annotations))
-
+    analysis.foreach(a => a(state))
     state
   }
 
   private val analysis = Seq(generalAnalysis(_), analyzeLineCoverage(_), analyzeToggleCoverage(_))
 
-  private def generalAnalysis(annos: AnnotationSeq): Unit = {
-    val coverPoints = annos.collect{ case a: CoverageInfo => a }.size
+  private def generalAnalysis(state: CircuitState): Unit = {
+    val coverPoints = state.annotations.collect{ case a: CoverageInfo => a }.size
     logger.info("Coverage Statistics:")
     logger.info(s"- Total automatic cover points: $coverPoints")
+    val ignored = Coverage.collectModulesToIgnore(state)
+    if(ignored.nonEmpty) {
+      logger.info(s"- Ignored modules: " + ignored.toSeq.sorted.mkString(", "))
+    }
   }
 
-  private def analyzeLineCoverage(annos: AnnotationSeq): Unit = {
-    val line = annos.collect{ case a : LineCoverageAnnotation => a }
+  private def analyzeLineCoverage(state: CircuitState): Unit = {
+    val line = state.annotations.collect{ case a : LineCoverageAnnotation => a }
     if(line.nonEmpty) {
       logger.info("Line Coverage:")
       logger.info(s"- Line cover points: ${line.size}")
     }
   }
 
-  private def analyzeToggleCoverage(annos: AnnotationSeq): Unit = {
+  private def analyzeToggleCoverage(state: CircuitState): Unit = {
+    val annos = state.annotations
     val toggle = annos.collect{ case a : ToggleCoverageAnnotation => a }
     if(toggle.nonEmpty) {
       logger.info("Toggle Coverage:")

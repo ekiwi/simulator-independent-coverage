@@ -1,5 +1,6 @@
+LL := warn
 firrtl_jar = ../coverage/utils/bin/firrtl.jar
-firrtl_bin = ../coverage/utils/bin/firrtl
+firrtl_bin = ../coverage/utils/bin/firrtl -ll ${LL}
 firrtl_srcs = $(shell find ../coverage/src -type f)
 $(firrtl_jar): $(firrtl_srcs)
 	cd ../coverage && sbt assembly

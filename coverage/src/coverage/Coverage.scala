@@ -8,6 +8,8 @@ import firrtl._
 import logger.LazyLogging
 import chiseltest.coverage._
 import firrtl.annotations.{ModuleTarget, SingleTargetAnnotation}
+import firrtl.options.Dependency
+import firrtl.stage.TransformManager.TransformDependency
 
 import scala.util.matching.Regex
 import scala.collection.mutable
@@ -23,6 +25,9 @@ case class DoNotCoverAnnotation(target: ModuleTarget) extends SingleTargetAnnota
 }
 
 object Coverage {
+  val AllPasses: Seq[TransformDependency] = Seq(
+    Dependency(LineCoveragePass), Dependency(ToggleCoveragePass), Dependency(FsmCoveragePass),
+  )
 
   def collectTestCoverage(annos: AnnotationSeq): List[(String, Long)] = {
     annos.collect { case TestCoverage(e) => e } match {

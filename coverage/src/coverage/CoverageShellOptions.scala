@@ -53,6 +53,11 @@ final class CoverageShellOptions extends RegisteredLibrary {
       helpText = "select module which should not be instrumented with coverage",
       helpValueName = Some("<circuit:module>")
     ),
+    new ShellOption[Unit](
+      longOption = "emit-cover-info",
+      toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(CoverageInfoEmitter))),
+      helpText = "write coverage information to a .cover.json file"
+    ),
   )
 
   private def parseModuleTarget(a: String): ModuleTarget = {

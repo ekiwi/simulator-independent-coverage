@@ -6,8 +6,6 @@ package coverage
 
 import chiseltest.coverage.CoverageInfo
 import firrtl._
-import firrtl.options.Dependency
-import firrtl.stage.TransformManager.TransformDependency
 
 /** Display information about all coverage instrumentation.
  *  This pass does not modify the circuit itself, it only prints out
@@ -15,12 +13,8 @@ import firrtl.stage.TransformManager.TransformDependency
  *  to see the output.
  * */
 object CoverageStatisticsPass extends Transform with DependencyAPIMigration {
-  val Supported: Seq[TransformDependency] = Seq(
-    Dependency(LineCoveragePass), Dependency(ToggleCoveragePass), // TODO: Dependency(FsmCoveragePass),
-  )
-
   override def prerequisites = Seq()
-  override def optionalPrerequisites = Supported
+  override def optionalPrerequisites = Coverage.AllPasses
   override def invalidates(a: Transform) = false
 
   override def execute(state: CircuitState): CircuitState = {

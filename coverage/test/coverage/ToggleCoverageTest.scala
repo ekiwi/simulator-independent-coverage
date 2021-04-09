@@ -7,7 +7,7 @@ package coverage
 import chisel3._
 import chiseltest.ChiselScalatestTester
 import coverage.circuits.Test1Module
-import firrtl.annotations.ReferenceTarget
+import firrtl.annotations.{CircuitTarget, ReferenceTarget}
 import firrtl.options.Dependency
 import firrtl.stage.RunFirrtlTransformAnnotation
 import org.scalatest.flatspec.AnyFlatSpec
@@ -97,6 +97,19 @@ class ToggleCoverageInstrumentationTest extends AnyFlatSpec with CompilerTest {
     // no cover statements in the child module since all signals are exposed on the IOs.
     val enToggleLines = l.filter(_.contains("reg enToggle"))
     assert(enToggleLines.length == 1, enToggleLines.mkString("\n"))
+  }
+
+  it should "work, even if the toplevel module is ignored" in {
+    val ignored = DoNotCoverAnnotation(CircuitTarget("ToggleTestModule").module("ToggleTestModule"))
+    val (result, _) = compile(new ToggleTestModule(), "low", a = ignored +: ToggleCoverage.all)
+    //println(result)
+    val l = result.split('\n').map(_.trim)
+
+    // we still expect there to be exactly 17 cover statements since the toplevel is purely a pass-through module
+    val covers = l.filter(_.startsWith("cover("))
+    val coverCount = covers.length
+    val expectedCoverBits = 8 + 8 + 1
+    assert(coverCount == expectedCoverBits, "\n" + covers.mkString("\n"))
   }
 
   private def refToString(r: ReferenceTarget): String =

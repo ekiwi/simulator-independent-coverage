@@ -86,16 +86,22 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
       logger.info("[ToggleCoverage] nothing to do since no coverage options were specified")
       return state
     }
-    val ignoreMods = Coverage.collectModulesToIgnore(state)
 
     // collect global alias information
     val iGraph = InstanceKeyGraph(state.circuit)
     val aliases = AliasAnalysis.findAliases(state.circuit, iGraph)
 
+    // Since modules can be excluded from coverage, this means that we might have to treat more than one
+    // module as a toplevel module.
+    val ignoreMods = Coverage.collectModulesToIgnore(state)
+    val instantiatedInIgnoredModule =
+      iGraph.getChildInstances.filter{ case (name, _) => ignoreMods(name) }.flatMap(_._2.map(_.module)).toSet
+    val isTop = Set(state.circuit.main) | instantiatedInIgnoredModule
+
     // we first instrument each module in isolation
     val newAnnos = new Annos()
     val c = CircuitTarget(state.circuit.main)
-    val ms = state.circuit.modules.map(m => onModule(m, c, newAnnos, ignoreMods, opt, aliases(m.name)))
+    val ms = state.circuit.modules.map(m => onModule(m, c, newAnnos, ignoreMods, opt, aliases(m.name), isTop))
     val circuit = state.circuit.copy(modules = ms.map(_._1))
 
     // as a second step we add information to our annotations for signals that cross module boundaries
@@ -155,11 +161,10 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
   private type PortAliases = Seq[(String, Seq[ReferenceTarget])]
 
   private def onModule(m: ir.DefModule, c: CircuitTarget, annos: Annos, ignore: Set[String],
-    opt: Options, aliases: AliasAnalysis.Aliases): (ir.DefModule, PortAliases, Option[Annotation]) =
+    opt: Options, aliases: AliasAnalysis.Aliases, isTop: String => Boolean): (ir.DefModule, PortAliases, Option[Annotation]) =
     m match {
       case mod: ir.Module if !ignore(mod.name) =>
         // first we check to see which signals we want to cover
-        val isTop = mod.name == c.name
         val allSignals = collectSignals(mod)
         val signals = filterSignals(allSignals, opt)
 
@@ -169,7 +174,7 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
           // create a module wide signal that indicates whether the toggle coverage is active
           val en = ir.Reference(namespace.newName("enToggle"), Utils.BoolType, RegKind, UnknownFlow)
           val ctx = ModuleCtx(annos, namespace, c.module(mod.name), en, Builder.findClock(mod))
-          val (coverStmts, portAliases) = coverSignals(signals, aliases, ctx, isTop)
+          val (coverStmts, portAliases) = coverSignals(signals, aliases, ctx, isTop(mod.name))
           if(coverStmts.nonEmpty) {
             // create actual hardware to generate enable signal
             val (enStmt, enAnno) = buildCoverEnable(ctx, opt.resetAware)

@@ -31,7 +31,7 @@ class ClockAndResetAnalysisSpec extends LeanTransformSpec(Seq(Dependency(ClockAn
 }
 
 
-private object ClockAndResetAnalysisExamples {
+object ClockAndResetAnalysisExamples {
   /* Original Chisel:
   class Inverter extends Module {
     val io = IO(new Bundle {

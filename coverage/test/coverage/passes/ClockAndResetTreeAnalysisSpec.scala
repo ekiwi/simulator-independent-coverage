@@ -26,7 +26,11 @@ class ClockAndResetTreeAnalysisSpec extends LeanTransformSpec(Seq(Dependency(Clo
     compile(rocket)
   }
 
-  it should "analyze Rocket Chip generated for Firesim" ignore {
+  it should "analyze the AsyncQueueSink" in {
+    compile(asyncQueueSink)
+  }
+
+  it should "analyze Rocket Chip generated for Firesim" in {
     compile(firesimRocket)
   }
 }

@@ -25,6 +25,10 @@ class ClockAndResetAnalysisSpec extends LeanTransformSpec(Seq(Dependency(ClockAn
     compile(rocket)
   }
 
+  it should "analyze the AsyncQueueSink" in {
+    compile(asyncQueueSink)
+  }
+
   it should "analyze Rocket Chip generated for Firesim" in {
     compile(firesimRocket)
   }
@@ -81,6 +85,7 @@ object ClockAndResetAnalysisExamples {
     |
     |""".stripMargin
 
+  def asyncQueueSink: String = FileUtils.getTextResource("/AsyncQueueSink.fir")
   def iCache: String = FileUtils.getTextResource("/regress/ICache.fir")
   def rocket: String = FileUtils.getTextResource("/regress/RocketCore.fir")
   def firesimRocket: String = FileUtils.getTextResource("/FireSimRocketConfig.fir")

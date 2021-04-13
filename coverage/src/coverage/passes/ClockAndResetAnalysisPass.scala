@@ -38,7 +38,8 @@ object ClockAndResetAnalysisPass extends Transform with DependencyAPIMigration {
 
   private def scanModule(m: ir.DefModule): ModuleInfo = m match {
     case e: ir.ExtModule =>
-      throw new RuntimeException(s"TODO: deal with extmodules")
+      logger.warn(s"TODO: deal with exmodules like ${e.name}")
+      ModuleInfo(List(), List(), List(), List())
     case mod: ir.Module =>
       // println(mod.serialize)
       new ModuleScanner().onModule(mod)

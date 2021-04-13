@@ -21,8 +21,12 @@ class ClockAndResetAnalysisSpec extends LeanTransformSpec(Seq(Dependency(ClockAn
     compile(iCache)
   }
 
-  it should "analyze Rocket Chip" in {
+  it should "analyze Rocket Core" in {
     compile(rocket)
+  }
+
+  it should "analyze Rocket Chip generated for Firesim" in {
+    compile(firesimRocket)
   }
 }
 
@@ -79,4 +83,5 @@ private object ClockAndResetAnalysisExamples {
 
   def iCache: String = FileUtils.getTextResource("/regress/ICache.fir")
   def rocket: String = FileUtils.getTextResource("/regress/RocketCore.fir")
+  def firesimRocket: String = FileUtils.getTextResource("/FireSimRocketConfig.fir")
 }

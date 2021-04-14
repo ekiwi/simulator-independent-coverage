@@ -165,7 +165,5 @@ object AliasAnalysis {
       cons(lhs.serialize) = rhs.serialize
     case other => other.foreachStmt(onStmt(_, cons))
   }
-
+  private case class LocalInfo(groups: Seq[List[String]])
 }
-
-private case class LocalInfo(groups: Seq[List[String]])

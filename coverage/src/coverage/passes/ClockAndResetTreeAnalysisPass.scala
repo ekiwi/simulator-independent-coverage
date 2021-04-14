@@ -29,54 +29,52 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
   override def invalidates(a: Transform) = false
 
   override def execute(state: CircuitState): CircuitState = {
-    val modInfos = state.circuit.modules.map(scanModule)
+
+    // first we analyze each module in isolation
+    val modInfos = state.circuit.modules.map(m => m.name -> ModuleTreeScanner.scan(m))
+
+    // then we combine the results, taking the hierarchy into account
+
+
     state
   }
-
-  private def scanModule(m: ir.DefModule): ModuleTreeInfo = m match {
-    case e: ir.ExtModule =>
-      logger.warn(s"TODO: deal with exmodules like ${e.name}")
-      ModuleTreeInfo()
-    case mod: ir.Module =>
-      // println(mod.serialize)
-      new ModuleTreeScanner().onModule(mod)
-  }
 }
-
-private case class ModuleTreeInfo()
-
 
 private object ModuleTreeScanner {
   private case class Con(lhs: String, rhs: String, inverted: Boolean, info: ir.Info)
 
-  private def analyzeResults(m: ModuleTreeScanner): ModuleTreeInfo = {
+  def scan(m: ir.DefModule): LocalInfo = m match {
+    case _: ir.ExtModule => LocalInfo(List(), List(), List())
+    case mod: ir.Module =>
+      val scan = new ModuleTreeScanner()
+      scan.onModule(mod)
+      analyzeResults(scan)
+  }
+
+  private def analyzeResults(m: ModuleTreeScanner): LocalInfo = {
     // our analysis goes backwards, from output, clock or reset use to the source
     val cons = m.connections.map(c => c.lhs -> c).toMap
     val isInput = m.inputs.toSet
-    val isReg = m.inputs.toSet
+    val isReg = m.regs.toSet
 
-    // resets
-    println("Reset Paths:")
-    val resets = m.usedAsReset.toSeq.sorted.map { r =>
-      val path = findPath(cons, r)
-      if(path.size > 1) { println("PATH") }
-      if(r != "reset") { println("UNUSUAL") }
-      println(path)
+    // find all signals that are definitely reset or clock signals (since they are used as such)
+    val resets = analyzeSignals(m.usedAsReset.toSeq, cons, isInput, isReg, "reset")
+    val clocks = analyzeSignals(m.usedAsClock.toSeq, cons, isInput, isReg, "clock")
+
+    // check to see if any outputs are also resets or clocks or derived from an input
+    val outputs = m.usedAsOutput.toSeq.sorted.flatMap { s =>
+      val path = findPath(cons, s)
+      val src = path.last
+      // we are only interested in outputs that directly depend on an input
+      if(!isInput(src._1)) { None } else {
+        val usedAsReset = path.map(_._1).exists(resets.contains)
+        val usedAsClock = path.map(_._1).exists(clocks.contains)
+        assert(!(usedAsReset && usedAsClock), f"Found signal that is both used as a reset and a clock: $path")
+        Some(OutputInfo(s, src._1, path.head._2, usedAsReset=usedAsReset, usedAsClock=usedAsClock))
+      }
     }
 
-
-    println("Resets")
-    println(m.usedAsReset.toSeq.sorted.mkString(", "))
-    println("Clocks")
-    println(m.usedAsClock.toSeq.sorted.mkString(", "))
-    println("Outputs")
-    println(m.usedAsOutput.toSeq.sorted.mkString(", "))
-
-    println()
-    println()
-
-    // TODO: summarize analysis and return result
-    ModuleTreeInfo()
+    LocalInfo(resets.values.toSeq.sortBy(_.name), clocks.values.toSeq.sortBy(_.name), outputs)
   }
 
   private def findPath(cons: Map[String, Con], name: String): Seq[(String, Boolean)] = cons.get(name) match {
@@ -86,30 +84,26 @@ private object ModuleTreeScanner {
     case None => List((name, false))
   }
 
+  private def analyzeSignals(names: Seq[String], cons: Map[String, Con], isInput: String => Boolean,
+    isReg: String => Boolean, kind: String): Map[String, SignalInfo] = {
+    names.sorted.flatMap { s =>
+      val path = findPath(cons, s)
+      val src = path.last
+      assert(!src._2, f"Sources should never be inverted! $src")
+      assert(!isReg(src._1), f"Registered ${kind}s are not currently supported: $path")
+      assert(isInput(src._1), f"Found $kind that is not derived from an input. How can that happen? $path")
+      path.map{ case (name, inverted) => name -> SignalInfo(name, src._1, inverted) }
+    }.toMap
+  }
 
-  private case class SignalInfo(name: String, source: String, inverted: Boolean)
+  case class SignalInfo(name: String, source: String, inverted: Boolean)
+  case class OutputInfo(name: String, source: String, inverted: Boolean, usedAsReset: Boolean, usedAsClock: Boolean)
+  case class LocalInfo(resets: Seq[SignalInfo], clocks: Seq[SignalInfo], outputs: Seq[OutputInfo])
 
   private def couldBeResetOrClock(tpe: ir.Type): Boolean = tpe match {
     case ir.ClockType => true
     case ir.ResetType => true
     case ir.AsyncResetType => true
-    case ir.UIntType(ir.IntWidth(w)) if w == 1 => true
-    case ir.SIntType(ir.IntWidth(w)) if w == 1 => true
-    case _ => false
-  }
-
-  /** decide based on the type only if this signal could be used as a reset (neither sound nor complete!) */
-  private def couldBeReset(tpe: ir.GroundType): Boolean = tpe match {
-    case ir.ResetType => true
-    case ir.AsyncResetType => true
-    case ir.UIntType(ir.IntWidth(w)) if w == 1 => true
-    case ir.SIntType(ir.IntWidth(w)) if w == 1 => true
-    case _ => false
-  }
-
-  /** decide based on the type only if this signal could be used as a clock (neither sound nor complete!) */
-  private def couldBeClock(tpe: ir.GroundType): Boolean = tpe match {
-    case ir.ClockType => true
     case ir.UIntType(ir.IntWidth(w)) if w == 1 => true
     case ir.SIntType(ir.IntWidth(w)) if w == 1 => true
     case _ => false
@@ -123,6 +117,7 @@ private object ModuleTreeScanner {
  *  - the only operation that we allow on reset/clock signals is inversion (not(...))
  *    this will turn a posedge clock into a negedge clock and a high-active reset into
  *    a low-active reset
+ *  - we also try our best to filter out no-ops, like a bits(..., 0, 0) extraction
  */
 private class ModuleTreeScanner {
   import ModuleTreeScanner._
@@ -136,13 +131,9 @@ private class ModuleTreeScanner {
   private val connections = mutable.ArrayBuffer[Con]()
 
 
-  def onModule(m: ir.Module): ModuleTreeInfo = {
+  def onModule(m: ir.Module): Unit = {
     m.ports.foreach(onPort)
     onStmt(m.body)
-    println("=================")
-    println(s"= ${m.name}")
-    println("=================")
-    analyzeResults(this)
   }
 
   /** called for module inputs and submodule outputs */
@@ -170,6 +161,7 @@ private class ModuleTreeScanner {
       // we treat the outputs of the submodule as inputs to our module
       case ir.Field(name, ir.Default, tpe) => addInput(ir.SubField(ref, name, tpe))
       case ir.Field(name, ir.Flip, tpe) => addOutput(ir.SubField(ref, name, tpe))
+      case ir.Field(_, other, _) => throw new RuntimeException(s"Unexpected field direction: $other")
     }
   }
 
@@ -235,13 +227,14 @@ private class ModuleTreeScanner {
   private def analyzeClockOrReset(e: ir.Expression): Option[(String, Boolean)] = e match {
     case ref: ir.RefLikeExpression => Some((ref.serialize, false))
     case _ : ir.Mux => None // for now we do not analyze muxes
-    case ir.DoPrim(op, Seq(arg), _, _) =>
+    case ir.DoPrim(op, Seq(arg), consts, _) =>
       op match {
         case PrimOps.Not => analyzeClockOrReset(arg).map{ case (n, inv) => n -> !inv }
         case PrimOps.AsAsyncReset => analyzeClockOrReset(arg)
         case PrimOps.AsClock => analyzeClockOrReset(arg)
         case PrimOps.AsUInt => analyzeClockOrReset(arg)
         case PrimOps.AsSInt => analyzeClockOrReset(arg)
+        case PrimOps.Bits if consts == List(BigInt(0), BigInt(0)) => analyzeClockOrReset(arg)
         case _ => None
       }
     // TODO: can we always safely ignore that a clock or reset signal might be invalid?

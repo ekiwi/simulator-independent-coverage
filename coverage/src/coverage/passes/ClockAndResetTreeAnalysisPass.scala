@@ -8,7 +8,7 @@ import coverage.midas.Builder
 import firrtl._
 import firrtl.analyses.InstanceKeyGraph
 import firrtl.analyses.InstanceKeyGraph.InstanceKey
-import firrtl.annotations.{ReferenceTarget, SingleTargetAnnotation}
+import firrtl.annotations.{ModuleTarget, ReferenceTarget, SingleTargetAnnotation}
 import firrtl.options.Dependency
 
 import scala.collection.mutable
@@ -41,7 +41,7 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
     state.copy(annotations = annos ++ state.annotations)
   }
 
-  import ModuleTreeScanner.{ModuleInfo, ConnectionInfo, SignalInfo, SignalGroup}
+  import ModuleTreeScanner.{ModuleInfo, Tree, Sink}
 
   private def mergeInfo(iGraph: InstanceKeyGraph, local: Map[String, ModuleInfo]): ModuleInfo = {
     // compute global results
@@ -51,111 +51,90 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
 
     moduleOrderBottomUp.foreach {
       case m: ir.Module =>
-        val info = mergeWithSubmodules(m, local(m.name), merged, childInstances(m.name))
+        val info = mergeWithSubmodules(local(m.name), merged, childInstances(m.name))
         merged(m.name) = info
-      case e: ir.ExtModule =>
-        val outputs = local(e.name).connections
-        ModuleInfo(Seq(), Seq(), outputs)
+      case e: ir.ExtModule => local(e.name)
     }
 
     merged(iGraph.top.module)
   }
 
-  private type SignalGroups = Seq[SignalGroup]
-
-  private def mergeWithSubmodules(m: ir.Module, local: ModuleInfo, getMerged: String => ModuleInfo, instances: Seq[InstanceKey]): ModuleInfo = {
+  private def mergeWithSubmodules(local: ModuleInfo, getMerged: String => ModuleInfo, instances: Seq[InstanceKey]): ModuleInfo = {
     val submoduleInfo = instances.map { case InstanceKey(name, module) =>  name -> getMerged(module) }
-
-    // we first resolve all connections
-    val allCons = resolveConnections(local.connections, submoduleInfo)
-
-    // filter out the connections that are relevant to the outside world
-    val connections = allCons.filterNot(c => isInstancePort(c.source) || isInstancePort(c.sink))
-
-    // resolve all our clock and reset signals
-    val sinkToSource = allCons.map(c => c.sink -> c).toMap // every sink should be unique!
-    val subClocks = submoduleInfo.map{ case (n, i) => n -> i.clocks }
-    val clocks = resolveSignals(local.clocks, subClocks, sinkToSource)
-    val subResets = submoduleInfo.map{ case (n, i) => n -> i.resets }
-    val resets = resolveSignals(local.resets, subResets, sinkToSource)
-
-    // package it all up
-    ModuleInfo(clocks, resets, connections)
+    // resolve all new tree connections
+    ModuleInfo(resolveTrees(local, submoduleInfo))
   }
 
-  private def resolveSignals(local: Seq[SignalGroup], submodules: Seq[(String, SignalGroups)],
-    sinkToSource: Map[String, ConnectionInfo]): SignalGroups = {
-    // prefix sub-module signals
-    val prefixed = submodules.flatMap { case (name, groups) => addPrefix(name, groups) }
-
-    // resolve all signal groups
-    val resolved = (local ++ prefixed).map { case g @ SignalGroup(source, signals) =>
-      sinkToSource.get(source) match {
-        case Some(con) =>
-          val newSignals = signals.map(s => s.copy(inverted = s.inverted ^ con.inverted))
-          SignalGroup(con.source, newSignals)
-        case None => g
-      }
-    }
-
-    // merge all groups that now draw from the same source
-    resolved.groupBy(_.source).toSeq.sortBy(_._1).map { case (source, groups) =>
-      SignalGroup(source, groups.flatMap(_.signals))
-    }
-  }
-
-  private def resolveConnections(local: Seq[ConnectionInfo], submoduleInfo: Seq[(String, ModuleInfo)]): Seq[ConnectionInfo] = {
+  private def resolveTrees(local: ModuleInfo, submoduleInfo: Seq[(String, ModuleInfo)]): Seq[Tree] = {
     // we consider local connections and any connections from our submodule
-    val connections = local ++ submoduleInfo.flatMap{ case (n, i) => i.connections.map(addPrefix(n, _)) }
+    val trees = local.trees ++ submoduleInfo.flatMap{ case (n, i) => i.trees.map(addPrefix(n, _)) }
 
-    // if the source is also a sink, then we have an "internal" connections, otherwise we consider it external
-    val isSink = connections.map(_.sink).toSet
-    val (intSrc, extSrc) = connections.partition(c => isSink(c.source))
+    // if the source a submodule port, then we have an "internal" tree, otherwise we consider it external
+    val (intSrc, extSrc) = trees.partition(t => t.source.count(_ == '.') == 1)
+
+    // TODO: deal with ext modules
+    // val isSink = trees.flatMap(_.leaves.map(_.name)).toSet
+    // val (intSrc, extSrc) = trees.partition(t => isSink(t.source))
 
     // create an index for internal sources to allow us to trace connections
-    val intCons = intSrc.groupBy(_.source) // since it is a clock/reset TREE, a single source can have multiple sinks
+    val intTrees = intSrc.groupBy(_.source) // since it is a clock/reset TREE, a single source can have multiple sinks
 
     // the connections that start at an "external" port are our starting points
     var todo = extSrc
 
     // collect all connections that start at an external source
-    val done = mutable.ArrayBuffer[ConnectionInfo]()
+    val done = mutable.ArrayBuffer[Tree]()
 
     // this is a fixed point computation, since connections could "snake" through submodules
     while(todo.nonEmpty) {
-      todo = todo.flatMap { con =>
-        // remember this connection
-        done.append(con)
-        // connect everything starting at the sink and add it to our todo list
-        intCons.getOrElse(con.sink, List()).map(connectSource(_, con))
+      todo = todo.flatMap { tree =>
+        val (didExpand, expandedTree) = expandTree(tree, intTrees)
+        if(didExpand) {
+          Some(expandedTree)
+        } else {
+          done.append(expandedTree)
+          None
+        }
       }
     }
 
     done
   }
 
-  private def connectSource(con: ConnectionInfo, source: ConnectionInfo): ConnectionInfo = {
-    require(con.source == source.sink)
-    val inverted = source.inverted ^ con.inverted
-    val usedAsReset = source.usedAsReset || con.usedAsReset
-    val usedAsClock = source.usedAsClock || con.usedAsClock
-    ConnectionInfo(con.sink, source.source, inverted, usedAsReset=usedAsReset, usedAsClock=usedAsClock)
+  private def expandTree(tree: Tree, sources: Map[String, Seq[Tree]]): (Boolean, Tree) = {
+    // expand leaves when possible
+    val leavesAndInternal = tree.leaves.map { case s @ Sink(name, inverted, _) =>
+      sources.get(name) match {
+        case Some(value) =>
+          // if there is an expansion, the leaf becomes and inner node
+          val leaves = value.flatMap(v => connectSinks(tree.source, v.leaves, inverted))
+          val internal = s +: value.flatMap(v => connectSinks(tree.source, v.leaves, inverted))
+          (leaves, internal)
+        case None =>
+          // if there is no expansion, the leaf stays a leaf
+          (List(s), List())
+      }
+    }
+
+    val leaves = leavesAndInternal.flatMap(_._1)
+    val newInternal = leavesAndInternal.flatMap(_._2)
+    val didExpand = newInternal.nonEmpty
+
+    (didExpand, tree.copy(leaves = leaves, internal = tree.internal ++ newInternal))
   }
 
-  private def isInstancePort(name: String): Boolean = name.contains('.')
-  private def addPrefix(name: String, groups: SignalGroups): SignalGroups = {
-    groups.map { case SignalGroup(source, signals) =>
-      SignalGroup(name + "." + source, signals.map(s => s.copy(name = name + "." + s.name)))
-    }
+  private def connectSinks(source: String, sinks: Seq[Sink], inverted: Boolean): Seq[Sink] =
+    sinks.filterNot(_.name == source).map(s => s.copy(inverted = s.inverted ^ inverted))
+
+  private def addPrefix(name: String, t: Tree): Tree = {
+    val leaves = t.leaves.map(s => s.copy(name = name + "." + s.name))
+    val internal = t.internal.map(s => s.copy(name = name + "." + s.name))
+    Tree(name + "." + t.source, leaves, internal=internal)
   }
-  private def addPrefix(name: String, o: ConnectionInfo): ConnectionInfo =
-    o.copy(sink = name + "." + o.sink, source = name + "." + o.source)
 
   private def makeAnnos(iGraph: InstanceKeyGraph, merged: ModuleInfo): AnnotationSeq = {
-    println("Clocks:")
-    merged.clocks.foreach(println)
-    println("Resets:")
-    merged.clocks.foreach(println)
+    println("Trees:")
+    merged.trees.foreach(println)
     Seq()
   }
 
@@ -167,8 +146,8 @@ private object ModuleTreeScanner {
   def scan(m: ir.DefModule): ModuleInfo = m match {
     case e: ir.ExtModule =>
       val outPorts = e.ports.filter(_.direction == ir.Output).filter(p => couldBeResetOrClock(p.tpe))
-      val outputs = outPorts.map(p => ConnectionInfo(p.name, p.name, false, false, false))
-      ModuleInfo(List(), List(), outputs)
+      val outputs = outPorts.map(p => Tree(p.name, List(Sink(p.name, false, List(PortSink(p))))))
+      ModuleInfo(outputs)
     case mod: ir.Module =>
       val scan = new ModuleTreeScanner()
       scan.onModule(mod)
@@ -179,58 +158,49 @@ private object ModuleTreeScanner {
     // our analysis goes backwards, from output, clock or reset use to the source
     val cons = m.connections.map(c => c.lhs -> c).toMap
     val isInput = m.inputs.toSet
-    val isReg = m.regs.toSet
 
-    // find all signals that are definitely reset or clock signals (since they are used as such)
-    val resets = analyzeSignals(m.usedAsReset.toSeq, cons, isInput, isReg, "reset")
-    val clocks = analyzeSignals(m.usedAsClock.toSeq, cons, isInput, isReg, "clock")
+    // determine the source of all sinks and merge them together by source
+    val trees = m.sinks.toSeq.map { case (name, infos) =>
+      val (src, inverted) = findSource(cons, name)
+      src -> Sink(name, inverted, infos)
+    }.groupBy(_._1).map { case (source, sinks) => Tree(source, sinks.map(_._2)) }
 
-    // check to see if any outputs are also resets or clocks or derived from an input
-    val connections = m.usedAsOutput.toSeq.sorted.flatMap { sink =>
-      val path = findPath(cons, sink)
-      val (src, _) = path.last
-      // we are only interested in outputs that directly depend on an input
-      if(!isInput(src)) { None } else {
-        val usedAsReset = path.map(_._1).exists(resets.contains)
-        val usedAsClock = path.map(_._1).exists(clocks.contains)
-        assert(!(usedAsReset && usedAsClock), f"Found signal that is both used as a reset and a clock: $path")
-        Some(ConnectionInfo(sink, src, path.head._2, usedAsReset=usedAsReset, usedAsClock=usedAsClock))
-      }
-    }
+    // filter out any trees that do not originate at an input (TODO: make sure that these trees to not connect to a clock or reset)
+    val inputTrees = trees.toSeq.filter(t => isInput(t.source))
 
-    ModuleInfo(groupSignals(resets), groupSignals(clocks), connections)
+    ModuleInfo(inputTrees)
   }
 
-  private def groupSignals(signals: Map[String, SignalSourceInfo]): Seq[SignalGroup] = {
-    signals.values.groupBy(_.source).toSeq.sortBy(_._1).map { case (source, sigs) =>
-      SignalGroup(source, sigs.toSeq.sortBy(_.name).map(s => SignalInfo(s.name, s.inverted)))
-    }
-  }
-
-  private def findPath(cons: Map[String, Con], name: String): Seq[(String, Boolean)] = cons.get(name) match {
+  private def findSource(cons: Map[String, Con], name: String): (String, Boolean) = cons.get(name) match {
     case Some(value) =>
-      val prefix = findPath(cons, value.rhs)
-      (name, prefix.head._2 ^ value.inverted) +: prefix
-    case None => List((name, false))
+      val (name, inv) = findSource(cons, value.rhs)
+      (name, inv ^ value.inverted)
+    case None => (name, false)
   }
 
-  private def analyzeSignals(names: Seq[String], cons: Map[String, Con], isInput: String => Boolean,
-    isReg: String => Boolean, kind: String): Map[String, SignalSourceInfo] = {
-    names.sorted.flatMap { s =>
-      val path = findPath(cons, s)
-      val src = path.last
-      assert(!src._2, f"Sources should never be inverted! $src")
-      assert(!isReg(src._1), f"Registered ${kind}s are not currently supported: $path")
-      assert(isInput(src._1), f"Found $kind that is not derived from an input. How can that happen? $path")
-      path.map{ case (name, inverted) => name -> SignalSourceInfo(name, src._1, inverted) }
-    }.toMap
+  sealed trait SinkInfo { def info: ir.Info ; def isReset: Boolean = false ; def isClock: Boolean = false }
+  case class MemClockSink(m: ir.DefMemory, port: String) extends SinkInfo {
+    override def isClock = true
+    override def info = m.info
   }
-
-  private case class SignalSourceInfo(name: String, source: String, inverted: Boolean)
-  case class SignalInfo(name: String, inverted: Boolean)
-  case class SignalGroup(source: String, signals: Seq[SignalInfo])
-  case class ConnectionInfo(sink: String, source: String, inverted: Boolean, usedAsReset: Boolean, usedAsClock: Boolean)
-  case class ModuleInfo(resets: Seq[SignalGroup], clocks: Seq[SignalGroup], connections: Seq[ConnectionInfo])
+  case class RegClockSink(r: ir.DefRegister) extends SinkInfo {
+    override def isClock = true
+    override def info = r.info
+  }
+  case class StmtClockSink(s: ir.Statement with ir.HasInfo) extends SinkInfo {
+    override def isClock = true
+    override def info = s.info
+  }
+  case class RegResetSink(r: ir.DefRegister) extends SinkInfo {
+    override def isReset = true
+    override def info = r.info
+  }
+  case class RegNextSink(r: ir.DefRegister) extends SinkInfo { override def info = r.info }
+  case class PortSink(p: ir.Port) extends SinkInfo { override def info = p.info }
+  case class InstSink(i: ir.DefInstance, port: String) extends SinkInfo { override def info = i.info }
+  case class Sink(name: String, inverted: Boolean, infos: Seq[SinkInfo])
+  case class Tree(source: String, leaves: Seq[Sink], internal: Seq[Sink] = List())
+  case class ModuleInfo(trees: Seq[Tree])
 
   private def couldBeResetOrClock(tpe: ir.Type): Boolean = tpe match {
     case ir.ClockType => true
@@ -255,11 +225,10 @@ private class ModuleTreeScanner {
   import ModuleTreeScanner._
 
   // we keep track of the usage and connections of signals that could be reset or clocks
-  private val usedAsClock = mutable.HashSet[String]()
-  private val usedAsReset = mutable.HashSet[String]()
-  private val usedAsOutput = mutable.HashSet[String]()
+  private val sinks = mutable.HashMap[String, List[SinkInfo]]()
   private val inputs = mutable.ArrayBuffer[String]()
-  private val regs = mutable.ArrayBuffer[String]()
+  private val regs = mutable.HashMap[String, ir.DefRegister]()
+  private val mems = mutable.HashMap[String, ir.DefMemory]()
   private val connections = mutable.ArrayBuffer[Con]()
 
 
@@ -274,15 +243,19 @@ private class ModuleTreeScanner {
     inputs.append(ref.serialize)
   }
 
+  private def addSinkInfo(name: String, i: SinkInfo): Unit = {
+    sinks(name) = i +: sinks.getOrElse(name, List())
+  }
+
   /** called for module outputs and submodule inputs */
-  private def addOutput(ref: ir.RefLikeExpression): Unit = {
+  private def addOutput(ref: ir.RefLikeExpression, info: SinkInfo): Unit = {
     if(!couldBeResetOrClock(ref.tpe)) return
-    usedAsOutput.add(ref.serialize)
+    addSinkInfo(ref.serialize, info)
   }
 
   private def onPort(p: ir.Port): Unit = p.direction match {
     case ir.Input => addInput(ir.Reference(p))
-    case ir.Output => addOutput(ir.Reference(p))
+    case ir.Output => addOutput(ir.Reference(p), PortSink(p))
   }
 
   private def onInstance(i: ir.DefInstance): Unit = {
@@ -292,7 +265,7 @@ private class ModuleTreeScanner {
     ports.foreach {
       // we treat the outputs of the submodule as inputs to our module
       case ir.Field(name, ir.Default, tpe) => addInput(ir.SubField(ref, name, tpe))
-      case ir.Field(name, ir.Flip, tpe) => addOutput(ir.SubField(ref, name, tpe))
+      case ir.Field(name, ir.Flip, tpe) => addOutput(ir.SubField(ref, name, tpe), InstSink(i, name))
       case ir.Field(_, other, _) => throw new RuntimeException(s"Unexpected field direction: $other")
     }
   }
@@ -307,10 +280,15 @@ private class ModuleTreeScanner {
   private def onConnect(c: ir.Connect): Unit = {
     val loc = c.loc.asInstanceOf[ir.RefLikeExpression]
     Builder.getKind(loc) match {
-      case RegKind => // we ignore registers
+      case RegKind =>
+        addSinkInfo(loc.serialize, RegNextSink(regs(loc.serialize)))
       case PortKind => onConnectSignal(loc.serialize, c.expr, c.info)
       case InstanceKind => onConnectSignal(loc.serialize, c.expr, c.info)
-      case MemKind if loc.serialize.endsWith(".clk") => useClock(c.expr)
+      case MemKind if loc.serialize.endsWith(".clk") =>
+        loc match {
+          case ir.SubField(ir.SubField(ir.Reference(name, _, _, _), port, _, _), "clk", _, _) =>
+            useClock(c.expr, MemClockSink(mems(name), port))
+        }
       case WireKind => onConnectSignal(loc.serialize, c.expr, c.info)
       case _ => case other => throw new RuntimeException(s"Unexpected connect of kind: ${other} (${c.serialize})")
     }
@@ -319,9 +297,9 @@ private class ModuleTreeScanner {
   private def onStmt(s: ir.Statement): Unit = s match {
     case i : ir.DefInstance => onInstance(i)
     case r: ir.DefRegister =>
-      if(couldBeResetOrClock(r.tpe)) { regs.append(r.name) }
-      useClock(r.clock)
-      useReset(r.reset)
+      if(couldBeResetOrClock(r.tpe)) { regs(r.name) = r }
+      useClock(r.clock, RegClockSink(r))
+      useReset(r.reset, r)
     case ir.DefNode(info, name, value) =>
       // we ignore any connects that cannot involve resets or clocks because of the type
       if(couldBeResetOrClock(value.tpe)) { onConnectSignal(name, value, info) }
@@ -329,28 +307,30 @@ private class ModuleTreeScanner {
       // we ignore any connects that cannot involve resets or clocks because of the type
       if(couldBeResetOrClock(lhs.tpe)) { onConnect(c) }
     case ir.Block(stmts) => stmts.foreach(onStmt)
-    case p : ir.Print => useClock(p.clk)
-    case s : ir.Stop => useClock(s.clk)
-    case v : ir.Verification => useClock(v.clk)
+    case p : ir.Print => useClock(p.clk, StmtClockSink(p))
+    case s : ir.Stop => useClock(s.clk, StmtClockSink(s))
+    case v : ir.Verification => useClock(v.clk, StmtClockSink(v))
     case _ : ir.DefWire => // nothing to do
-    case _: ir.DefMemory =>
+    case m: ir.DefMemory => mems(m.name) = m
     case _ : ir.IsInvalid =>
     case ir.EmptyStmt =>
     case other => throw new RuntimeException(s"Unexpected statement type: ${other.serialize}")
   }
 
   /** called when a clock is used for a register or memory */
-  private def useClock(e: ir.Expression): Unit = {
+  private def useClock(e: ir.Expression, info: SinkInfo): Unit = {
     analyzeClockOrReset(e) match {
-      case Some((name, _)) => usedAsClock.add(name)
+      case Some((name, false)) => addSinkInfo(name, info)
+      case Some((_, true)) => throw new NotImplementedError("TODO: deal with inversions")
       case None =>
     }
   }
 
   /** called when a reset is used for a register */
-  private def useReset(e: ir.Expression): Unit = {
+  private def useReset(e: ir.Expression, r: ir.DefRegister): Unit = {
     analyzeClockOrReset(e) match {
-      case Some((name, _)) => usedAsReset.add(name)
+      case Some((name, false)) => addSinkInfo(name, RegResetSink(r))
+      case Some((_, true)) => throw new NotImplementedError("TODO: deal with inversions")
       case None =>
     }
   }

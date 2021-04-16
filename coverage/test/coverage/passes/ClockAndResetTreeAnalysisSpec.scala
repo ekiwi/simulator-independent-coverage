@@ -22,11 +22,11 @@ class ClockAndResetTreeAnalysisSpec extends LeanTransformSpec(Seq(Dependency(Clo
     compile(iCache)
   }
 
-  it should "analyze Rocket Core" in {
+  it should "analyze Rocket Core" ignore {
     compile(rocket)
   }
 
-  it should "analyze the AsyncQueueSink" in {
+  it should "analyze the AsyncQueueSink" ignore {
     compile(asyncQueueSink)
   }
 

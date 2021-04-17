@@ -5,10 +5,11 @@
 package coverage.passes
 
 import coverage.midas.Builder
+import coverage.passes.ModuleTreeScanner.analyzeTree
 import firrtl._
 import firrtl.analyses.InstanceKeyGraph
 import firrtl.analyses.InstanceKeyGraph.InstanceKey
-import firrtl.annotations.{ModuleTarget, ReferenceTarget, SingleTargetAnnotation}
+import firrtl.annotations.{CircuitTarget, ModuleTarget, ReferenceTarget, SingleTargetAnnotation}
 import firrtl.options.Dependency
 
 import scala.collection.mutable
@@ -17,6 +18,12 @@ case class ResetAnnotation(target: ReferenceTarget, source: String, inverted: Bo
   override def duplicate(n: ReferenceTarget) = copy(target = n)
 }
 case class ClockAnnotation(target: ReferenceTarget, source: String, inverted: Boolean) extends SingleTargetAnnotation[ReferenceTarget] {
+  override def duplicate(n: ReferenceTarget) = copy(target = n)
+}
+case class ClockSourceAnnotation(target: ReferenceTarget, sinkCount: Int) extends SingleTargetAnnotation[ReferenceTarget] {
+  override def duplicate(n: ReferenceTarget) = copy(target = n)
+}
+case class ResetSourceAnnotation(target: ReferenceTarget, sinkCount: Int) extends SingleTargetAnnotation[ReferenceTarget] {
   override def duplicate(n: ReferenceTarget) = copy(target = n)
 }
 
@@ -133,9 +140,31 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
   }
 
   private def makeAnnos(iGraph: InstanceKeyGraph, merged: ModuleInfo): AnnotationSeq = {
+    val top = CircuitTarget(iGraph.top.module).module(iGraph.top.module)
+
+    // analyze trees and annotate sources
+    val sourceAnnos = merged.trees.flatMap { t =>
+      val info = analyzeTree(t)
+      assert(!t.source.contains('.'), s"TODO: deal with ext module sources")
+      val target = top.ref(t.source)
+
+      if(info.clockSinks > 0) {
+        assert(!(info.resetSinks > 0), s"Tree starting at ${t.source} is used both as a reset and a clock!")
+        Some(ClockSourceAnnotation(target, info.clockSinks))
+      } else if(info.resetSinks > 0) {
+        Some(ResetSourceAnnotation(target, info.resetSinks))
+      } else { None }
+    }
+
+
     println("Trees:")
-    merged.trees.foreach(println)
-    Seq()
+    merged.trees.foreach { t =>
+      val info = analyzeTree(t)
+      println(t.source)
+      println(info)
+    }
+
+    sourceAnnos
   }
 
 }
@@ -160,12 +189,17 @@ private object ModuleTreeScanner {
     val isInput = m.inputs.toSet
 
     // determine the source of all sinks and merge them together by source
-    val trees = m.sinks.toSeq.map { case (name, infos) =>
+    val sourceToSink = m.sinks.toSeq.map { case (name, infos) =>
       val (src, inverted) = findSource(cons, name)
       src -> Sink(name, inverted, infos)
-    }.groupBy(_._1).map { case (source, sinks) => Tree(source, sinks.map(_._2)) }
+    }
+    val trees = sourceToSink.groupBy(_._1).map { case (source, sinks) =>
+      val (leaves, internal) = sinks.map(_._2).partition(s => isInput(s.name))
+      Tree(source, leaves, internal)
+    }
 
-    // filter out any trees that do not originate at an input (TODO: make sure that these trees to not connect to a clock or reset)
+    // filter out any trees that do not originate at an input
+    // TODO: make sure that these trees to not connect to a clock or reset
     val inputTrees = trees.toSeq.filter(t => isInput(t.source))
 
     ModuleInfo(inputTrees)
@@ -178,7 +212,7 @@ private object ModuleTreeScanner {
     case None => (name, false)
   }
 
-  sealed trait SinkInfo { def info: ir.Info ; def isReset: Boolean = false ; def isClock: Boolean = false }
+  sealed trait SinkInfo { def info: ir.Info ; def isReset: Boolean = false ; def isClock: Boolean = false ; def isPort: Boolean = false}
   case class MemClockSink(m: ir.DefMemory, port: String) extends SinkInfo {
     override def isClock = true
     override def info = m.info
@@ -196,11 +230,26 @@ private object ModuleTreeScanner {
     override def info = r.info
   }
   case class RegNextSink(r: ir.DefRegister) extends SinkInfo { override def info = r.info }
-  case class PortSink(p: ir.Port) extends SinkInfo { override def info = p.info }
-  case class InstSink(i: ir.DefInstance, port: String) extends SinkInfo { override def info = i.info }
+  case class PortSink(p: ir.Port) extends SinkInfo { override def info = p.info ; override def isPort = true}
+  case class InstSink(i: ir.DefInstance, port: String) extends SinkInfo { override def info = i.info ; override def isPort = true}
   case class Sink(name: String, inverted: Boolean, infos: Seq[SinkInfo])
   case class Tree(source: String, leaves: Seq[Sink], internal: Seq[Sink] = List())
   case class ModuleInfo(trees: Seq[Tree])
+
+  case class TreeInfo(resetSinks: Int, clockSinks: Int, portSinks: Int)
+  def analyzeTree(tree: Tree): TreeInfo = {
+    var resetSinks = 0
+    var clockSinks = 0
+    var portSinks = 0
+    (tree.leaves ++ tree.internal).foreach { s =>
+      s.infos.foreach { i =>
+        if(i.isReset) resetSinks += 1
+        if(i.isClock) clockSinks += 1
+        if(i.isPort) portSinks += 1
+      }
+    }
+    TreeInfo(resetSinks, clockSinks, portSinks)
+  }
 
   private def couldBeResetOrClock(tpe: ir.Type): Boolean = tpe match {
     case ir.ClockType => true

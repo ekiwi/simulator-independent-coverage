@@ -5,13 +5,19 @@
 package coverage.passes
 
 import firrtl.options.Dependency
+import firrtl.annotations._
 
 class ClockAndResetTreeAnalysisSpec extends LeanTransformSpec(Seq(Dependency(ClockAndResetTreeAnalysisPass))) {
   behavior.of("ClockAndResetTreeAnalysis")
   import ClockAndResetAnalysisExamples._
 
   it should "analyze a circuit with a single clock" in {
-    compile(inverter)
+    val m = CircuitTarget("Inverter").module("Inverter")
+    val state = compile(inverter)
+
+    // there is exactly one register connected to the clock
+    assert(state.annotations.contains(ClockSourceAnnotation(m.ref("clock"), 1)))
+    // assert(state.annotations.contains(ClockAnnotation(m.ref("clock"), inverted = false, source = "clock")))
   }
 
   it should "analyze a circuit with a single clock and reset" in {

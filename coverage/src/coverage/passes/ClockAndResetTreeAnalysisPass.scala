@@ -163,7 +163,10 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
   private def pathToTarget(childInstances: Map[String, Seq[InstanceKey]], top: IsModule, path: List[String]): ReferenceTarget = path match {
     case List(name) => top.ref(name)
     case inst :: tail =>
-      val module = childInstances(top.module).find(_.name == inst).get.module
+      val instances = childInstances(top.leafModule)
+      val module = instances.find(_.name == inst).getOrElse(
+        throw new RuntimeException(s"Failed to find instance $inst in $top. Available: " + instances.mkString(", "))
+      ).module
       pathToTarget(childInstances, top.instOf(inst, module), tail)
   }
 

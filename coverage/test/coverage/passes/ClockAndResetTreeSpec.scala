@@ -61,8 +61,17 @@ class ClockAndResetTreeSpec extends LeanTransformSpec(Seq(Dependency(ClockAndRes
     ))
   }
 
-  it should "analyze Rocket Core" ignore {
-    compile(rocket)
+  it should "analyze Rocket Core" in {
+    val m = CircuitTarget("RocketCore").module("RocketCore")
+    val state = compile(rocket)
+
+    // there is a normal Chisel reset and clock source in the toplevel
+    assert(state.annotations.contains(
+      ClockSourceAnnotation(m.ref("clock"), 316)
+    ))
+    assert(state.annotations.contains(
+      ResetSourceAnnotation(m.ref("reset"), 58)
+    ))
   }
 
   it should "analyze the AsyncQueueSink" ignore {

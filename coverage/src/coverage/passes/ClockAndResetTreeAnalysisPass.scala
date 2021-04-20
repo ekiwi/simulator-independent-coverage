@@ -9,7 +9,7 @@ import coverage.passes.ModuleTreeScanner.analyzeTree
 import firrtl._
 import firrtl.analyses.InstanceKeyGraph
 import firrtl.analyses.InstanceKeyGraph.InstanceKey
-import firrtl.annotations.{CircuitTarget, ModuleTarget, ReferenceTarget, SingleTargetAnnotation}
+import firrtl.annotations.{CircuitTarget, IsModule, ModuleTarget, ReferenceTarget, SingleTargetAnnotation}
 import firrtl.options.Dependency
 
 import scala.collection.mutable
@@ -69,25 +69,24 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
   private def mergeWithSubmodules(local: ModuleInfo, getMerged: String => ModuleInfo, instances: Seq[InstanceKey]): ModuleInfo = {
     val submoduleInfo = instances.map { case InstanceKey(name, module) =>  name -> getMerged(module) }
     // resolve all new tree connections
-    ModuleInfo(resolveTrees(local, submoduleInfo))
+    val resolved = resolveTrees(local, submoduleInfo)
+    ModuleInfo(resolved)
   }
 
   private def resolveTrees(local: ModuleInfo, submoduleInfo: Seq[(String, ModuleInfo)]): Seq[Tree] = {
     // we consider local connections and any connections from our submodule
     val trees = local.trees ++ submoduleInfo.flatMap{ case (n, i) => i.trees.map(addPrefix(n, _)) }
 
-    // if the source a submodule port, then we have an "internal" tree, otherwise we consider it external
-    val (intSrc, extSrc) = trees.partition(t => t.source.count(_ == '.') == 1)
-
-    // TODO: deal with ext modules
-    // val isSink = trees.flatMap(_.leaves.map(_.name)).toSet
-    // val (intSrc, extSrc) = trees.partition(t => isSink(t.source))
+    // If the source is local to our module (i.e., it does not contain a '.') we consider it as a local starting point.
+    // If the source is "final", i.e. it can not be expanded, it also serves as a starting point.
+    def isStart(t: Tree) = !t.source.contains('.') || t.sourceIsFinal
+    val (startSrc, intSrc) = trees.partition(isStart)
 
     // create an index for internal sources to allow us to trace connections
     val intTrees = intSrc.groupBy(_.source) // since it is a clock/reset TREE, a single source can have multiple sinks
 
     // the connections that start at an "external" port are our starting points
-    var todo = extSrc
+    var todo = startSrc
 
     // collect all connections that start at an external source
     val done = mutable.ArrayBuffer[Tree]()
@@ -115,7 +114,7 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
         case Some(value) =>
           // if there is an expansion, the leaf becomes and inner node
           val leaves = value.flatMap(v => connectSinks(tree.source, v.leaves, inverted))
-          val internal = s +: value.flatMap(v => connectSinks(tree.source, v.leaves, inverted))
+          val internal = s +: value.flatMap(v => connectSinks(tree.source, v.internal, inverted))
           (leaves, internal)
         case None =>
           // if there is no expansion, the leaf stays a leaf
@@ -131,22 +130,22 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
   }
 
   private def connectSinks(source: String, sinks: Seq[Sink], inverted: Boolean): Seq[Sink] =
-    sinks.filterNot(_.name == source).map(s => s.copy(inverted = s.inverted ^ inverted))
+    sinks.map(s => s.copy(inverted = s.inverted ^ inverted))
 
   private def addPrefix(name: String, t: Tree): Tree = {
     val leaves = t.leaves.map(s => s.copy(name = name + "." + s.name))
     val internal = t.internal.map(s => s.copy(name = name + "." + s.name))
-    Tree(name + "." + t.source, leaves, internal=internal)
+    Tree(name + "." + t.source, t.sourceIsFinal, leaves, internal=internal)
   }
 
   private def makeAnnos(iGraph: InstanceKeyGraph, merged: ModuleInfo): AnnotationSeq = {
     val top = CircuitTarget(iGraph.top.module).module(iGraph.top.module)
+    val childInstances = iGraph.getChildInstances.toMap
 
     // analyze trees and annotate sources
     val sourceAnnos = merged.trees.flatMap { t =>
       val info = analyzeTree(t)
-      assert(!t.source.contains('.'), s"TODO: deal with ext module sources")
-      val target = top.ref(t.source)
+      val target = pathToTarget(childInstances, top, t.source.split('.').toList)
 
       if(info.clockSinks > 0) {
         assert(!(info.resetSinks > 0), s"Tree starting at ${t.source} is used both as a reset and a clock!")
@@ -167,6 +166,13 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
     sourceAnnos
   }
 
+  private def pathToTarget(childInstances: Map[String, Seq[InstanceKey]], top: IsModule, path: List[String]): ReferenceTarget = path match {
+    case List(name) => top.ref(name)
+    case inst :: tail =>
+      val module = childInstances(top.module).find(_.name == inst).get.module
+      pathToTarget(childInstances, top.instOf(inst, module), tail)
+  }
+
 }
 
 private object ModuleTreeScanner {
@@ -175,7 +181,7 @@ private object ModuleTreeScanner {
   def scan(m: ir.DefModule): ModuleInfo = m match {
     case e: ir.ExtModule =>
       val outPorts = e.ports.filter(_.direction == ir.Output).filter(p => couldBeResetOrClock(p.tpe))
-      val outputs = outPorts.map(p => Tree(p.name, List(Sink(p.name, false, List(PortSink(p))))))
+      val outputs = outPorts.map(p => Tree(p.name, sourceIsFinal = true, List(Sink(p.name, false, List(PortSink(p))))))
       ModuleInfo(outputs)
     case mod: ir.Module =>
       val scan = new ModuleTreeScanner()
@@ -194,16 +200,18 @@ private object ModuleTreeScanner {
       src -> Sink(name, inverted, infos)
     }
     val trees = sourceToSink.groupBy(_._1).map { case (source, sinks) =>
-      val (leaves, internal) = sinks.map(_._2).partition(s => isInput(s.name))
-      Tree(source, leaves, internal)
+      val (leaves, internal) = sinks.map(_._2).partition(s => isPort(s))
+      val sourceIsFinal = !isInput(source) // if the source is not an input, we know its final origin
+      Tree(source, sourceIsFinal, leaves, internal)
     }
 
-    // filter out any trees that do not originate at an input
-    // TODO: make sure that these trees to not connect to a clock or reset
-    val inputTrees = trees.toSeq.filter(t => isInput(t.source))
+    // is there any reason we should filter out trees?
+    val inputTrees = trees.toSeq
 
     ModuleInfo(inputTrees)
   }
+
+  private def isPort(sink: Sink): Boolean = sink.infos.exists(_.isPort)
 
   private def findSource(cons: Map[String, Con], name: String): (String, Boolean) = cons.get(name) match {
     case Some(value) =>
@@ -233,7 +241,10 @@ private object ModuleTreeScanner {
   case class PortSink(p: ir.Port) extends SinkInfo { override def info = p.info ; override def isPort = true}
   case class InstSink(i: ir.DefInstance, port: String) extends SinkInfo { override def info = i.info ; override def isPort = true}
   case class Sink(name: String, inverted: Boolean, infos: Seq[SinkInfo])
-  case class Tree(source: String, leaves: Seq[Sink], internal: Seq[Sink] = List())
+  case class Tree(source: String, sourceIsFinal: Boolean, leaves: Seq[Sink], internal: Seq[Sink] = List()) {
+    def sinks: Iterable[Sink] = leaves ++ internal
+    override def toString = s"Tree($source -> " + sinks.map(_.name).mkString(", ") + ")"
+  }
   case class ModuleInfo(trees: Seq[Tree])
 
   case class TreeInfo(resetSinks: Int, clockSinks: Int, portSinks: Int)

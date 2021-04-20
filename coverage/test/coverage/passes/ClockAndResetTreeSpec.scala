@@ -74,8 +74,33 @@ class ClockAndResetTreeSpec extends LeanTransformSpec(Seq(Dependency(ClockAndRes
     ))
   }
 
-  it should "analyze the AsyncQueueSink" ignore {
-    compile(asyncQueueSink)
+  it should "analyze the AsyncQueueSink" in {
+    val m = CircuitTarget("AsyncQueueSink").module("AsyncQueueSink")
+    val state = compile(asyncQueueSink)
+
+    // there is only a single boring toplevel clock
+    assert(state.annotations.contains(
+      ClockSourceAnnotation(m.ref("clock"), 28)
+    ))
+    // there is also one boring toplevel reset
+    assert(state.annotations.contains(
+      ResetSourceAnnotation(m.ref("reset"), 18)
+    ))
+
+    // however there are multiple derived resets:
+    //
+    // node _sink_valid_0_reset_T_2 = or(_sink_valid_0_reset_T, _sink_valid_0_reset_T_1) @[AsyncQueue.scala 173:42]
+    assert(state.annotations.contains(
+      ResetSourceAnnotation(m.ref("_sink_valid_0_reset_T_2"), 3)
+    ))
+    // node _sink_valid_1_reset_T_2 = or(_sink_valid_1_reset_T, _sink_valid_1_reset_T_1) @[AsyncQueue.scala 174:42]
+    assert(state.annotations.contains(
+      ResetSourceAnnotation(m.ref("_sink_valid_1_reset_T_2"), 3)
+    ))
+    // node _source_extend_reset_T_2 = or(_source_extend_reset_T, _source_extend_reset_T_1) @[AsyncQueue.scala 175:42]
+    assert(state.annotations.contains(
+      ResetSourceAnnotation(m.ref("_source_extend_reset_T_2"), 3)
+    ))
   }
 
   it should "analyze Rocket Chip generated for Firesim" ignore {

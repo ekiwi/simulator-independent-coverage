@@ -103,8 +103,22 @@ class ClockAndResetTreeSpec extends LeanTransformSpec(Seq(Dependency(ClockAndRes
     ))
   }
 
-  it should "analyze Rocket Chip generated for Firesim" ignore {
-    compile(firesimRocket)
+  it should "analyze Rocket Chip generated for Firesim" in {
+    val m = CircuitTarget("FireSim").module("FireSim")
+    val state = compile(firesimRocket)
+
+    val clocks = state.annotations.collect{ case a: ClockSourceAnnotation => a }
+    val resets = state.annotations.collect{ case a: ResetSourceAnnotation => a }
+
+    // there are two clock sources, both originating from the RationalClockBridge
+    val clockBridge = m.instOf("RationalClockBridge", "RationalClockBridge")
+    assert(clocks.contains(ClockSourceAnnotation(clockBridge.ref("clocks_0"), 6088)))
+    assert(clocks.contains(ClockSourceAnnotation(clockBridge.ref("clocks_1"), 467)))
+    assert(clocks.size == 2)
+
+    // there are multiple reset in the design, many coming from the ClockGroupResetSynchronizer and AsyncQueues
+    val peekPokeBridge = m.instOf("peekPokeBridge", "PeekPokeBridge")
+    assert(resets.contains(ResetSourceAnnotation(peekPokeBridge.ref("reset"), 30)))
   }
 }
 

@@ -60,7 +60,8 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
       case m: ir.Module =>
         val info = mergeWithSubmodules(local(m.name), merged, childInstances(m.name))
         merged(m.name) = info
-      case e: ir.ExtModule => local(e.name)
+      case e: ir.ExtModule =>
+        merged(e.name) = local(e.name)
     }
 
     merged(iGraph.top.module)
@@ -145,7 +146,7 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
     // analyze trees and annotate sources
     val sourceAnnos = merged.trees.flatMap { t =>
       val info = analyzeTree(t)
-      val target = pathToTarget(childInstances, top, t.source.split('.').toList)
+      def target = pathToTarget(childInstances, top, t.source.split('.').toList)
 
       if(info.clockSinks > 0) {
         assert(!(info.resetSinks > 0), s"Tree starting at ${t.source} is used both as a reset and a clock!")
@@ -165,7 +166,7 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
     case inst :: tail =>
       val instances = childInstances(top.leafModule)
       val module = instances.find(_.name == inst).getOrElse(
-        throw new RuntimeException(s"Failed to find instance $inst in $top. Available: " + instances.mkString(", "))
+        throw new RuntimeException(s"Failed to find instance $inst in $top for path $path.\nAvailable: " + instances.mkString(", "))
       ).module
       pathToTarget(childInstances, top.instOf(inst, module), tail)
   }

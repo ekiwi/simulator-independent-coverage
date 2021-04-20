@@ -66,6 +66,7 @@ object ClockAndResetTreeExamples {
       |    cReg <= not(cReg)
       |    clockOut <= asClock(cReg)
       |  module ClockDiv:
+      |    input reset : AsyncReset   ; unused reset input as chisel would generate
       |    input clock : Clock
       |    input in : UInt<8>
       |    output out0 : UInt<8>

@@ -149,8 +149,10 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
 
       if(info.clockSinks > 0) {
         assert(!(info.resetSinks > 0), s"Tree starting at ${t.source} is used both as a reset and a clock!")
+        assert(!(info.resetPortSink > 0), s"Tree starting at ${t.source} is used both as a reset and a clock!")
         Some(ClockSourceAnnotation(target, info.clockSinks))
       } else if(info.resetSinks > 0) {
+        assert(!(info.clockPortSinks > 0), s"Tree starting at ${t.source} is used both as a reset and a clock!")
         Some(ResetSourceAnnotation(target, info.resetSinks))
       } else { None }
     }
@@ -238,7 +240,7 @@ private object ModuleTreeScanner {
     override def info = r.info
   }
   case class RegNextSink(r: ir.DefRegister) extends SinkInfo { override def info = r.info }
-  case class PortSink(p: ir.Port) extends SinkInfo { override def info = p.info ; override def isPort = true}
+  case class PortSink(p: ir.Port) extends SinkInfo { override def info = p.info ; override def isPort = true }
   case class InstSink(i: ir.DefInstance, port: String) extends SinkInfo { override def info = i.info ; override def isPort = true}
   case class Sink(name: String, inverted: Boolean, infos: Seq[SinkInfo])
   case class Tree(source: String, sourceIsFinal: Boolean, leaves: Seq[Sink], internal: Seq[Sink] = List()) {
@@ -247,19 +249,25 @@ private object ModuleTreeScanner {
   }
   case class ModuleInfo(trees: Seq[Tree])
 
-  case class TreeInfo(resetSinks: Int, clockSinks: Int, portSinks: Int)
+  case class TreeInfo(resetSinks: Int, clockSinks: Int, clockPortSinks: Int, resetPortSink: Int)
   def analyzeTree(tree: Tree): TreeInfo = {
     var resetSinks = 0
     var clockSinks = 0
-    var portSinks = 0
+    var clockPortSinks = 0
+    var resetPortSinks = 0
     (tree.leaves ++ tree.internal).foreach { s =>
       s.infos.foreach { i =>
         if(i.isReset) resetSinks += 1
         if(i.isClock) clockSinks += 1
-        if(i.isPort) portSinks += 1
+        if(i.isPort) { i match {
+          case PortSink(ir.Port(_, _, _, ir.ResetType)) => resetPortSinks += 1
+          case PortSink(ir.Port(_, _, _, ir.AsyncResetType)) => resetPortSinks += 1
+          case PortSink(ir.Port(_, _, _, ir.ClockType)) => clockPortSinks += 1
+          case _ =>
+        }}
       }
     }
-    TreeInfo(resetSinks, clockSinks, portSinks)
+    TreeInfo(resetSinks, clockSinks, clockPortSinks, resetPortSinks)
   }
 
   private def couldBeResetOrClock(tpe: ir.Type): Boolean = tpe match {

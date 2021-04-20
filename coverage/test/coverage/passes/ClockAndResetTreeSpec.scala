@@ -12,13 +12,13 @@ class ClockAndResetTreeSpec extends LeanTransformSpec(Seq(Dependency(ClockAndRes
   import ClockAndResetAnalysisExamples._
   import ClockAndResetTreeExamples._
 
-  it should "analyze a circuit with a single clock" ignore {
+  it should "analyze a circuit with a single clock" in {
     val m = CircuitTarget("Inverter").module("Inverter")
     val state = compile(inverter)
 
     // there is exactly one register connected to the clock
     assert(state.annotations.contains(ClockSourceAnnotation(m.ref("clock"), 1)))
-    assert(state.annotations.contains(ClockAnnotation(m.ref("clock"), inverted = false, source = "clock")))
+    // assert(state.annotations.contains(ClockAnnotation(m.ref("clock"), inverted = false, source = "clock")))
   }
 
   it should "analyze a clock divider" in {
@@ -35,12 +35,30 @@ class ClockAndResetTreeSpec extends LeanTransformSpec(Seq(Dependency(ClockAndRes
 
   }
 
-  it should "analyze a circuit with a single clock and reset" ignore {
-    compile(inverterWithReset)
+  it should "analyze a circuit with a single clock and reset" in {
+    val m = CircuitTarget("InverterWithReset").module("InverterWithReset")
+    val state = compile(inverterWithReset)
+
+    // there is a normal Chisel reset and clock source in the toplevel
+    assert(state.annotations.contains(
+      ClockSourceAnnotation(m.ref("clock"), 1)
+    ))
+    assert(state.annotations.contains(
+      ResetSourceAnnotation(m.ref("reset"), 1)
+    ))
   }
 
-  it should "analyze the iCache" ignore {
-    compile(iCache)
+  it should "analyze the iCache" in {
+    val m = CircuitTarget("ICache").module("ICache")
+    val state = compile(iCache)
+
+    // there is a normal Chisel reset and clock source in the toplevel
+    assert(state.annotations.contains(
+      ClockSourceAnnotation(m.ref("clock"), 45)
+    ))
+    assert(state.annotations.contains(
+      ResetSourceAnnotation(m.ref("reset"), 6)
+    ))
   }
 
   it should "analyze Rocket Core" ignore {

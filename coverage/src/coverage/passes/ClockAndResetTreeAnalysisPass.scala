@@ -157,14 +157,6 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
       } else { None }
     }
 
-
-    println("Trees:")
-    merged.trees.foreach { t =>
-      val info = analyzeTree(t)
-      println(t.source)
-      println(info)
-    }
-
     sourceAnnos
   }
 

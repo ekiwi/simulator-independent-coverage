@@ -72,6 +72,13 @@ class ClockAndResetTreeSpec extends LeanTransformSpec(Seq(Dependency(ClockAndRes
     assert(clocks == List(ClockSourceAnnotation(m.ref("clock"), 2)))
   }
 
+  it should "analyze inverted clock signals" in {
+    val m = CircuitTarget("InvertedClock").module("InvertedClock")
+    val state = compile(invertedClock)
+
+    val clocks = state.annotations.collect{ case a: ClockSourceAnnotation => a }
+    assert(clocks == List(ClockSourceAnnotation(m.ref("clock"), 8)))
+  }
 
   it should "analyze a circuit with a single clock and reset" in {
     val m = CircuitTarget("InverterWithReset").module("InverterWithReset")
@@ -355,4 +362,50 @@ object ClockAndResetTreeExamples {
       |    out0Reg <= in
       |    out0 <= out0Reg
       |""".stripMargin
+
+  val invertedClock =
+    """circuit InvertedClock:
+      |  module InvertedClock:
+      |    input reset : AsyncReset   ; unused reset input as chisel would generate
+      |    input clock : Clock
+      |    input in : UInt<8>
+      |    output out0 : UInt<8>
+      |
+      |    wire clock2 : UInt<1>
+      |    wire clock3 : Clock
+      |    node clock0 = asUInt(clock)
+      |    node clock1 = not(clock0)
+      |    clock3 <= asClock(clock2)
+      |    clock2 <= clock1
+      |
+      |    ; @posedge clock
+      |    reg r0 : UInt<8>, clock
+      |    r0 <= in
+      |    ; @negedge clock
+      |    ; TODO: support inversion at the register
+      |    ;reg r1 : UInt<8>, asClock(not(asUInt(clock)))
+      |    reg r1 : UInt<8>, clock
+      |    r1 <= in
+      |    ; @posedge clock
+      |    reg r2 : UInt<8>, asClock(not(asUInt(asClock(not(asUInt(clock))))))
+      |    r2 <= in
+      |    ; @posedge clock
+      |    reg r3 : UInt<8>, asClock(not(not(asUInt(clock))))
+      |    r3 <= in
+      |    ; @posedge clock
+      |    reg r4 : UInt<8>, asClock(clock0)
+      |    r4 <= in
+      |    ; @negedge clock
+      |    reg r5 : UInt<8>, asClock(clock1)
+      |    r5 <= in
+      |    ; @negedge clock
+      |    reg r6 : UInt<8>, asClock(clock2)
+      |    r6 <= in
+      |    ; @negedge clock
+      |    reg r7 : UInt<8>, asClock(clock3)
+      |    r7 <= in
+      |
+      |    out0 <= xor(r0, xor(r1, xor(r2, xor(r3, xor(r4, xor(r5, xor(r6, r7)))))))
+      |""".stripMargin
+
 }

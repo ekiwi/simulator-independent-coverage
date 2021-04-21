@@ -35,6 +35,44 @@ class ClockAndResetTreeSpec extends LeanTransformSpec(Seq(Dependency(ClockAndRes
 
   }
 
+  it should "analyze an inlined clock divider" in {
+    val m = CircuitTarget("InternalClockDiv").module("InternalClockDiv")
+    val state = compile(internalClockDiv)
+
+    // there are two source: 1) the clock input 2) the divided clock
+    assert(state.annotations.contains(
+      ClockSourceAnnotation(m.ref("clock"), 2)
+    ))
+    assert(state.annotations.contains(
+      ClockSourceAnnotation(m.ref("cReg"), 1)
+    ))
+  }
+
+  it should "analyze a clock going through multiple modules (sideways)" in {
+    val m = CircuitTarget("PassThrough").module("PassThrough")
+    val state = compile(passThroughSideways)
+
+    val clocks = state.annotations.collect{ case a: ClockSourceAnnotation => a }
+    assert(clocks == List(ClockSourceAnnotation(m.ref("clock"), 1)))
+  }
+
+  it should "analyze a clock going through multiple modules (vertical)" in {
+    val m = CircuitTarget("PassThrough").module("PassThrough")
+    val state = compile(passThroughVertical)
+
+    val clocks = state.annotations.collect{ case a: ClockSourceAnnotation => a }
+    assert(clocks == List(ClockSourceAnnotation(m.ref("clock"), 1)))
+  }
+
+  it should "analyze a clock going through multiple modules (vertical) w/ internal reg" in {
+    val m = CircuitTarget("PassThrough").module("PassThrough")
+    val state = compile(passThroughVerticalReg)
+
+    val clocks = state.annotations.collect{ case a: ClockSourceAnnotation => a }
+    assert(clocks == List(ClockSourceAnnotation(m.ref("clock"), 2)))
+  }
+
+
   it should "analyze a circuit with a single clock and reset" in {
     val m = CircuitTarget("InverterWithReset").module("InverterWithReset")
     val state = compile(inverterWithReset)
@@ -149,5 +187,172 @@ object ClockAndResetTreeExamples {
       |    out1 <= out1Reg
       |""".stripMargin
 
+  val internalClockDiv =
+    """circuit InternalClockDiv:
+      |  module Divider:
+      |    input clockIn : Clock
+      |    output clockOut : Clock
+      |    reg cReg : UInt<1>, clockIn
+      |    cReg <= not(cReg)
+      |    clockOut <= asClock(cReg)
+      |  module InternalClockDiv:
+      |    input reset : AsyncReset   ; unused reset input as chisel would generate
+      |    input clock : Clock
+      |    input in : UInt<8>
+      |    output out0 : UInt<8>
+      |    output out1 : UInt<8>
+      |
+      |    reg out0Reg : UInt<8>, clock
+      |    out0Reg <= in
+      |    out0 <= out0Reg
+      |
+      |    reg cReg : UInt<1>, clock
+      |    cReg <= not(cReg)
+      |    reg out1Reg : UInt<8>, asClock(cReg)
+      |    out1Reg <= in
+      |    out1 <= out1Reg
+      |""".stripMargin
 
+  val passThroughSideways =
+    """circuit PassThrough:
+      |  module Pass:
+      |    input in : UInt<1>
+      |    output out : UInt<1>
+      |    out <= in
+      |  module PassThrough:
+      |    input reset : AsyncReset   ; unused reset input as chisel would generate
+      |    input clock : Clock
+      |    input in : UInt<8>
+      |    output out0 : UInt<8>
+      |
+      |    inst p0 of Pass
+      |    inst p1 of Pass
+      |    inst p2 of Pass
+      |    inst p3 of Pass
+      |    inst p4 of Pass
+      |    inst p5 of Pass
+      |    inst p6 of Pass
+      |    inst p7 of Pass
+      |    inst p8 of Pass
+      |    inst p9 of Pass
+      |    p0.in <= asUInt(clock)
+      |    p1.in <= p0.out
+      |    p2.in <= p1.out
+      |    p3.in <= p2.out
+      |    p4.in <= p3.out
+      |    p5.in <= p4.out
+      |    p6.in <= p5.out
+      |    p7.in <= p6.out
+      |    p8.in <= p7.out
+      |    p9.in <= p8.out
+      |    node clk = asClock(p9.out)
+      |
+      |    reg out0Reg : UInt<8>, clk
+      |    out0Reg <= in
+      |    out0 <= out0Reg
+      |""".stripMargin
+
+  val passThroughVertical =
+    """circuit PassThrough:
+      |  module Pass0:
+      |    input in : UInt<1>
+      |    output out : UInt<1>
+      |    out <= in
+      |  module Pass1:
+      |    input in : UInt<1>
+      |    output out : UInt<1>
+      |    inst p of Pass0
+      |    p.in <= in
+      |    out <= p.out
+      |  module Pass2:
+      |    input in : UInt<1>
+      |    output out : UInt<1>
+      |    inst p of Pass1
+      |    p.in <= in
+      |    out <= p.out
+      |  module Pass3:
+      |    input in : UInt<1>
+      |    output out : UInt<1>
+      |    inst p of Pass2
+      |    p.in <= in
+      |    out <= p.out
+      |  module Pass4:
+      |    input in : UInt<1>
+      |    output out : UInt<1>
+      |    inst p of Pass3
+      |    p.in <= in
+      |    out <= p.out
+      |  module Pass5:
+      |    input in : UInt<1>
+      |    output out : UInt<1>
+      |    inst p of Pass4
+      |    p.in <= in
+      |    out <= p.out
+      |  module PassThrough:
+      |    input reset : AsyncReset   ; unused reset input as chisel would generate
+      |    input clock : Clock
+      |    input in : UInt<8>
+      |    output out0 : UInt<8>
+      |
+      |    inst p of Pass5
+      |    p.in <= asUInt(clock)
+      |    node clk = asClock(p.out)
+      |
+      |    reg out0Reg : UInt<8>, clk
+      |    out0Reg <= in
+      |    out0 <= out0Reg
+      |""".stripMargin
+
+  val passThroughVerticalReg =
+    """circuit PassThrough:
+      |  module Pass0:
+      |    input in : UInt<1>
+      |    output out : UInt<1>
+      |    out <= in
+      |    reg r: UInt<1>, asClock(in)
+      |    r <= not(r)
+      |  module Pass1:
+      |    input in : UInt<1>
+      |    output out : UInt<1>
+      |    inst p of Pass0
+      |    p.in <= in
+      |    out <= p.out
+      |  module Pass2:
+      |    input in : UInt<1>
+      |    output out : UInt<1>
+      |    inst p of Pass1
+      |    p.in <= in
+      |    out <= p.out
+      |  module Pass3:
+      |    input in : UInt<1>
+      |    output out : UInt<1>
+      |    inst p of Pass2
+      |    p.in <= in
+      |    out <= p.out
+      |  module Pass4:
+      |    input in : UInt<1>
+      |    output out : UInt<1>
+      |    inst p of Pass3
+      |    p.in <= in
+      |    out <= p.out
+      |  module Pass5:
+      |    input in : UInt<1>
+      |    output out : UInt<1>
+      |    inst p of Pass4
+      |    p.in <= in
+      |    out <= p.out
+      |  module PassThrough:
+      |    input reset : AsyncReset   ; unused reset input as chisel would generate
+      |    input clock : Clock
+      |    input in : UInt<8>
+      |    output out0 : UInt<8>
+      |
+      |    inst p of Pass5
+      |    p.in <= asUInt(clock)
+      |    node clk = asClock(p.out)
+      |
+      |    reg out0Reg : UInt<8>, clk
+      |    out0Reg <= in
+      |    out0 <= out0Reg
+      |""".stripMargin
 }

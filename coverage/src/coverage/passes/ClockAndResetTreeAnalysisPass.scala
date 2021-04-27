@@ -9,15 +9,15 @@ import coverage.passes.ModuleTreeScanner.analyzeTree
 import firrtl._
 import firrtl.analyses.InstanceKeyGraph
 import firrtl.analyses.InstanceKeyGraph.InstanceKey
-import firrtl.annotations.{CircuitTarget, IsModule, ModuleTarget, ReferenceTarget, SingleTargetAnnotation}
+import firrtl.annotations.{Annotation, CircuitTarget, IsModule, ModuleTarget, ReferenceTarget, SingleTargetAnnotation}
 import firrtl.options.Dependency
 
 import scala.collection.mutable
 
-case class ResetAnnotation(target: ReferenceTarget, source: String, inverted: Boolean, isAsync: Boolean) extends SingleTargetAnnotation[ReferenceTarget] {
+case class ResetAnnotation(target: ReferenceTarget, source: String, isAsync: Boolean, inverted: Boolean = true) extends SingleTargetAnnotation[ReferenceTarget] {
   override def duplicate(n: ReferenceTarget) = copy(target = n)
 }
-case class ClockAnnotation(target: ReferenceTarget, source: String, inverted: Boolean) extends SingleTargetAnnotation[ReferenceTarget] {
+case class ClockAnnotation(target: ReferenceTarget, source: String, inverted: Boolean = true) extends SingleTargetAnnotation[ReferenceTarget] {
   override def duplicate(n: ReferenceTarget) = copy(target = n)
 }
 case class ClockSourceAnnotation(target: ReferenceTarget, sinkCount: Int) extends SingleTargetAnnotation[ReferenceTarget] {
@@ -110,12 +110,12 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
 
   private def expandTree(tree: Tree, sources: Map[String, Seq[Tree]]): (Boolean, Tree) = {
     // expand leaves when possible
-    val leavesAndInternal = tree.leaves.map { case s @ Sink(name, inverted, _) =>
-      sources.get(name) match {
+    val leavesAndInternal = tree.leaves.map { s =>
+      sources.get(s.fullName) match {
         case Some(value) =>
           // if there is an expansion, the leaf becomes and inner node
-          val leaves = value.flatMap(v => connectSinks(tree.source, v.leaves, inverted))
-          val internal = s +: value.flatMap(v => connectSinks(tree.source, v.internal, inverted))
+          val leaves = value.flatMap(v => connectSinks(tree.source, v.leaves, s.inverted))
+          val internal = s +: value.flatMap(v => connectSinks(tree.source, v.internal, s.inverted))
           (leaves, internal)
         case None =>
           // if there is no expansion, the leaf stays a leaf
@@ -134,8 +134,8 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
     sinks.map(s => s.copy(inverted = s.inverted ^ inverted))
 
   private def addPrefix(name: String, t: Tree): Tree = {
-    val leaves = t.leaves.map(s => s.copy(name = name + "." + s.name))
-    val internal = t.internal.map(s => s.copy(name = name + "." + s.name))
+    val leaves = t.leaves.map(s => s.copy(prefix = name + "." + s.prefix))
+    val internal = t.internal.map(s => s.copy(prefix = name + "." + s.prefix))
     Tree(name + "." + t.source, t.sourceIsFinal, leaves, internal=internal)
   }
 
@@ -144,22 +144,36 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
     val childInstances = iGraph.getChildInstances.toMap
 
     // analyze trees and annotate sources
-    val sourceAnnos = merged.trees.flatMap { t =>
+    val sourceAnnosAndSinks = merged.trees.flatMap { t =>
       val info = analyzeTree(t)
       def target = pathToTarget(childInstances, top, t.source.split('.').toList)
 
       if(info.clockSinks > 0) {
         assert(!(info.resetSinks > 0), s"Tree starting at ${t.source} is used both as a reset and a clock!")
         assert(!(info.resetPortSink > 0), s"Tree starting at ${t.source} is used both as a reset and a clock!")
-        Some(ClockSourceAnnotation(target, info.clockSinks))
+        Some((ClockSourceAnnotation(target, info.clockSinks), t.sinks))
       } else if(info.resetSinks > 0) {
         assert(!(info.clockPortSinks > 0), s"Tree starting at ${t.source} is used both as a reset and a clock!")
-        Some(ResetSourceAnnotation(target, info.resetSinks))
+        Some((ResetSourceAnnotation(target, info.resetSinks), t.sinks))
       } else { None }
     }
 
-    sourceAnnos
+    val sourceAnnos = sourceAnnosAndSinks.map(_._1)
+
+    // collect all instances
+    val topInstance = InstanceKey("", iGraph.top.module)
+    val topChildren = childInstances(topInstance.module)
+    val instances = topInstance +: topChildren.flatMap(onInstance("", _, childInstances))
+    val sinkAnnos = annotateSinks(instances, sourceAnnosAndSinks.flatMap(_._2))
+
+    sourceAnnos ++ sinkAnnos
   }
+
+  private def annotateSinks(instances: Seq[InstanceKey],sinks: Seq[Sink]): Seq[Annotation] = {
+    // TODO
+    List()
+  }
+
 
   private def pathToTarget(childInstances: Map[String, Seq[InstanceKey]], top: IsModule, path: List[String]): ReferenceTarget = path match {
     case List(name) => top.ref(name)
@@ -171,6 +185,12 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
       pathToTarget(childInstances, top.instOf(inst, module), tail)
   }
 
+  private def onInstance(prefix: String, inst: InstanceKey, children: Map[String, Seq[InstanceKey]]): Seq[InstanceKey] = {
+    val ii = InstanceKey(prefix + inst.name, inst.module)
+    val cc = children(ii.module).flatMap(onInstance(ii.name + ".", _, children))
+    ii +: cc
+  }
+
 }
 
 private object ModuleTreeScanner {
@@ -179,7 +199,7 @@ private object ModuleTreeScanner {
   def scan(m: ir.DefModule): ModuleInfo = m match {
     case e: ir.ExtModule =>
       val outPorts = e.ports.filter(_.direction == ir.Output).filter(p => couldBeResetOrClock(p.tpe))
-      val outputs = outPorts.map(p => Tree(p.name, sourceIsFinal = true, List(Sink(p.name, false, List(PortSink(p))))))
+      val outputs = outPorts.map(p => Tree(p.name, sourceIsFinal = true, List(Sink(p.name, "", false, List(PortSink(p))))))
       ModuleInfo(outputs)
     case mod: ir.Module =>
       val scan = new ModuleTreeScanner()
@@ -195,7 +215,7 @@ private object ModuleTreeScanner {
     // determine the source of all sinks and merge them together by source
     val sourceToSink = m.sinks.toSeq.map { case (name, infos) =>
       val (src, inverted) = findSource(cons, name)
-      src -> Sink(name, inverted, infos)
+      src -> Sink(name, "", inverted, infos)
     }
     val trees = sourceToSink.groupBy(_._1).map { case (source, sinks) =>
       val (leaves, internal) = sinks.map(_._2).partition(s => isPort(s))
@@ -238,10 +258,12 @@ private object ModuleTreeScanner {
   case class RegNextSink(r: ir.DefRegister) extends SinkInfo { override def info = r.info }
   case class PortSink(p: ir.Port) extends SinkInfo { override def info = p.info ; override def isPort = true }
   case class InstSink(i: ir.DefInstance, port: String) extends SinkInfo { override def info = i.info ; override def isPort = true}
-  case class Sink(name: String, inverted: Boolean, infos: Seq[SinkInfo])
+  case class Sink(name: String, prefix: String, inverted: Boolean, infos: Seq[SinkInfo]) {
+    def fullName: String = prefix + name
+  }
   case class Tree(source: String, sourceIsFinal: Boolean, leaves: Seq[Sink], internal: Seq[Sink] = List()) {
     def sinks: Iterable[Sink] = leaves ++ internal
-    override def toString = s"Tree($source -> " + sinks.map(_.name).mkString(", ") + ")"
+    override def toString = s"Tree($source -> " + sinks.map(_.fullName).mkString(", ") + ")"
   }
   case class ModuleInfo(trees: Seq[Tree])
 
@@ -352,6 +374,7 @@ private class ModuleTreeScanner {
         loc match {
           case ir.SubField(ir.SubField(ir.Reference(name, _, _, _), port, _, _), "clk", _, _) =>
             useClock(c.expr, MemClockSink(mems(name), port))
+          case other => throw new RuntimeException(s"unexpected pattern: $other (${other.serialize})")
         }
       case WireKind => onConnectSignal(loc.serialize, c.expr, c.info)
       case _ => case other => throw new RuntimeException(s"Unexpected connect of kind: ${other} (${c.serialize})")

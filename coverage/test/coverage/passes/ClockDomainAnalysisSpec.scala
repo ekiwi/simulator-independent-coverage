@@ -85,6 +85,61 @@ object ClockDomainAnalysisExamples {
     |
     |""".stripMargin
 
+
+
+  val sameModuleDifferentNumberOfClocks =
+    """circuit SameModuleDifferentNumberOfClocks:
+      |  module Child:
+      |    input clock : Clock
+      |    input reset : Reset
+      |    input in0: UInt<8>
+      |    output out0: UInt<8>
+      |    output out1: UInt<8>
+      |
+      |    ; this signal is just wired through this module, but not actually clocked by it
+      |    out0 <= in0
+      |
+      |    reg counter : UInt<8>, clock with :
+      |      reset => (reset, UInt<8>(0))
+      |    counter <= add(counter, UInt(1))
+      |    ; this signal on the other hand is always under the domain of our clock
+      |    out1 <= counter
+      |
+      |  module SameModuleDifferentNumberOfClocks:
+      |    input reset: AsyncReset
+      |    input clockA: Clock
+      |    input clockB: Clock
+      |    input in0: UInt<8>
+      |    input in1: UInt<8>
+      |    output out0: UInt<8>
+      |    output out1: UInt<8>
+      |    output out2: UInt<8>
+      |    output out3: UInt<8>
+      |
+      |    ; we have one register for each clock domain
+      |    reg r0 : UInt<8>, clockA
+      |    r0 <= in0
+      |    reg r1 : UInt<8>, clockB
+      |    r1 <= in1
+      |
+      |    ; c0 will only have a single clock
+      |    inst c0 of Child
+      |    c0.clock <= clockA
+      |    c0.reset <= reset
+      |    c0.in0 <= r0
+      |    out0 <= c0.out0
+      |    out1 <= c0.out1
+      |
+      |    ; c1 is clocked by clockA, however its input is driven by clockB
+      |    inst c1 of Child
+      |    c1.clock <= clockA
+      |    c1.reset <= reset
+      |    c1.in0 <= r1
+      |    out2 <= c1.out0
+      |    out3 <= c1.out1
+      |""".stripMargin
+
+
   def asyncQueueSink: String = FileUtils.getTextResource("/AsyncQueueSink.fir")
   def iCache: String = FileUtils.getTextResource("/regress/ICache.fir")
   def rocket: String = FileUtils.getTextResource("/regress/RocketCore.fir")

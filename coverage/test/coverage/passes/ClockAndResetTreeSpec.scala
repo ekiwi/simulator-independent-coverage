@@ -112,6 +112,28 @@ class ClockAndResetTreeSpec extends LeanTransformSpec(Seq(Dependency(ClockAndRes
     ))
   }
 
+  it should "analyze a circuit with a different number of clock per instance" in {
+    val c = CircuitTarget("SameModuleDifferentNumberOfClocks")
+    val m = c.module("SameModuleDifferentNumberOfClocks")
+    val state = compile(sameModuleDifferentNumberOfClocks)
+
+    // we have two clock and one reset
+    assert(state.annotations.contains(
+      ClockSourceAnnotation(m.ref("clockA"), 3)
+    ))
+    assert(state.annotations.contains(
+      ClockSourceAnnotation(m.ref("clockB"), 1)
+    ))
+    assert(state.annotations.contains(
+      ResetSourceAnnotation(m.ref("reset"), 2)
+    ))
+
+    // the "clock" input of the "Child" module is always connected to clockA
+    assert(state.annotations.contains(
+      ClockAnnotation(c.module("Child").ref("clock"), "clockA")
+    ))
+  }
+
   it should "analyze the iCache" in {
     val m = CircuitTarget("ICache").module("ICache")
     val state = compile(iCache)

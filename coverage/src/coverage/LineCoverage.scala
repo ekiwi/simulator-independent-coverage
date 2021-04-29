@@ -127,7 +127,8 @@ object LineCoveragePass extends Transform with DependencyAPIMigration {
         val namespace = Namespace(mod)
         namespace.newName(Prefix)
         val ctx = ModuleCtx(annos, namespace, c.module(mod.name), Builder.findClock(mod))
-        val bodyInfo = onStmt(mod.body, ctx)
+        // we always cover the body, even if the module only contains nodes and cover statements
+        val bodyInfo = onStmt(mod.body, ctx).copy(_2 = true)
         val body = addCover(bodyInfo, ctx)
         mod.copy(body = body)
       case other => other
@@ -147,7 +148,10 @@ object LineCoveragePass extends Transform with DependencyAPIMigration {
       val infos = s.flatMap(_._3)
       (block, doCover, infos)
     case ir.EmptyStmt                                        => (ir.EmptyStmt, false, List())
+    // if there is only a cover statement, we do not explicitly try to cover that line
     case v @ ir.Verification(ir.Formal.Cover, _, _, _, _, _) => (v, false, List(v.info))
+    // nodes are always side-effect free, so they should not be covered unless there is another operation in the block
+    case n : ir.DefNode => (n, false, List(n.info))
     case other: ir.HasInfo => (other, true, List(other.info))
     case other => (other, false, List())
   }

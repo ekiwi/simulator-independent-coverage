@@ -31,8 +31,8 @@ abstract class SimulatorCoverageTest(name: String, backend: BackendAnnotation) e
     // the cover point in the main module are not prefixed
     assert(cov.keys.toList == List("cover_0"))
 
-    // since we executed one step (+ the implicit reset) and all inputs are zero by default, we expect the count to be 3
-    assert(cov("cover_0") == 3)
+    // since we executed one step and all inputs are zero by default, we expect the count to be 3
+    assert(cov("cover_0") == 2)
   }
 
   it should "report count for all user cover points (with submodules)" in {
@@ -44,8 +44,8 @@ abstract class SimulatorCoverageTest(name: String, backend: BackendAnnotation) e
     // the cover point in the main module are not prefixed, but the one in the child module are
     assert(cov.keys.toList.sorted == List("c0.cover_0", "c1.cover_0", "cover_0"))
 
-    // since we executed one step (+ the implicit reset) and all inputs are zero by default, we expect the count to be 3
-    assert(cov("cover_0") == 3)
+    // since we executed one step and all inputs are zero by default, we expect the count to be 3
+    assert(cov("cover_0") == 2)
   }
 
   it should "generate the same coverage as other simulators" in {
@@ -58,7 +58,7 @@ abstract class SimulatorCoverageTest(name: String, backend: BackendAnnotation) e
     }
     val cov = getCoverage(r)
     val expected = Map(
-      "cover_0" -> 131, "l_1" -> 248, "l_0" -> 135, "l_3" -> 1002, "l_2" -> 754,
+      "cover_0" -> 130, "l_1" -> 248, "l_0" -> 135, "l_3" -> 1002, "l_2" -> 754,
       "c1.l_0" -> 1002, "c0.cover_0" -> 370,
       "c0.l_0" -> 1002, "c1.cover_0" -> 366
     )

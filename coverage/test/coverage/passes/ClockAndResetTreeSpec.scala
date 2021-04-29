@@ -67,7 +67,7 @@ class ClockAndResetTreeSpec extends LeanTransformSpec(Seq(Dependency(ClockAndRes
     ))
   }
 
-  it should "analyze a clock going through multiple modules (sideways)" ignore { // TODO
+  it should "analyze a clock going through multiple modules (sideways)" in {
     val m = CircuitTarget("PassThrough").module("PassThrough")
     val state = compile(passThroughSideways)
 

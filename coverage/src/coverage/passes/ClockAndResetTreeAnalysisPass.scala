@@ -205,9 +205,11 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
   private def sameSinks(instSinks: Seq[Seq[SinkAnnoInfo]]): Boolean = {
     require(instSinks.nonEmpty)
     if(instSinks.length == 1) return true
-    val head = instSinks.head.toSet
-    instSinks.tail.forall(_.toSet == head)
+    val noPrefix = instSinks.map(removePrefix)
+    val head = noPrefix.head.toSet
+    noPrefix.tail.forall(_.toSet == head)
   }
+  private def removePrefix(infos: Seq[SinkAnnoInfo]): Seq[SinkAnnoInfo] = infos.map(i => i.copy(prefix = ""))
 
   private def pathToTarget(childInstances: Map[String, Seq[InstanceKey]], top: IsModule, path: List[String]): ReferenceTarget = path match {
     case List(name) => top.ref(name)

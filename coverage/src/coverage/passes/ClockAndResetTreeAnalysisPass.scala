@@ -171,6 +171,7 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
 
   private def annotateSinks(c: CircuitTarget, childInstances: Map[String, Seq[InstanceKey]], sinks: Seq[SinkAnnoInfo]): Seq[Annotation] = {
     val topInstance = InstanceKey("", c.name)
+    val topTarget = c.module(c.name)
     val topChildren = childInstances(topInstance.module)
     val instances = topInstance +: topChildren.flatMap(onInstance("", _, childInstances))
 
@@ -179,17 +180,17 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
     moduleToInstances.flatMap { case (module, insts) =>
       val instSinks = insts.map(i => instanceToSinks.getOrElse(i.name, List()))
       // if the sinks are the same in all instances, we can just do module level annos
-      if(sameSinks(instSinks)) {
-        val m = c.module(module)
-        instSinks.head.map(makeSinkAnno(childInstances, m, _))
-      } else {
-        //instSinks.zip(insts).flatMap { case (sinks, inst) =>
-        //  val m = pathToTarget(inst.name)
-        //}
-        // TODO
-        ???
+      val (same, different) = sameSinks(instSinks)
+      val m = c.module(module)
+      val moduleAnnos = same.map(makeSinkAnno(childInstances, m, _))
+
+      // for sinks that are different in different instances, we need to annotate on an instance level
+      val instAnnos = different.map { info =>
+        val m = pathToModuleTarget(childInstances, topTarget, info.prefix.split('.').toList)
+        makeSinkAnno(childInstances, m, info)
       }
 
+      moduleAnnos ++ instAnnos
     }
   }
 
@@ -202,12 +203,14 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
     }
   }
 
-  private def sameSinks(instSinks: Seq[Seq[SinkAnnoInfo]]): Boolean = {
+  // partitions sinks into sinks that are the same in all instances and the ones that are different across instances
+  private def sameSinks(instSinks: Seq[Seq[SinkAnnoInfo]]): (Seq[SinkAnnoInfo], Seq[SinkAnnoInfo]) = {
     require(instSinks.nonEmpty)
-    if(instSinks.length == 1) return true
-    val noPrefix = instSinks.map(removePrefix)
-    val head = noPrefix.head.toSet
-    noPrefix.tail.forall(_.toSet == head)
+    if(instSinks.length == 1) return (removePrefix(instSinks.head), List())
+    val byPrefixFreeInfo = instSinks.flatten.groupBy(i => i.copy(prefix = "")).toSeq
+    val completeSize = instSinks.length
+    val (all, notAll) = byPrefixFreeInfo.partition(_._2.size == completeSize)
+    (all.map(_._1), notAll.flatMap(_._2))
   }
   private def removePrefix(infos: Seq[SinkAnnoInfo]): Seq[SinkAnnoInfo] = infos.map(i => i.copy(prefix = ""))
 
@@ -219,6 +222,15 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
         throw new RuntimeException(s"Failed to find instance $inst in $top for path $path.\nAvailable: " + instances.mkString(", "))
       ).module
       pathToTarget(childInstances, top.instOf(inst, module), tail)
+  }
+  private def pathToModuleTarget(childInstances: Map[String, Seq[InstanceKey]], top: IsModule, path: List[String]): IsModule = path match {
+    case Nil => top
+    case inst :: tail =>
+      val instances = childInstances(top.leafModule)
+      val module = instances.find(_.name == inst).getOrElse(
+        throw new RuntimeException(s"Failed to find instance $inst in $top for path $path.\nAvailable: " + instances.mkString(", "))
+      ).module
+      pathToModuleTarget(childInstances, top.instOf(inst, module), tail)
   }
 
   private def onInstance(prefix: String, inst: InstanceKey, children: Map[String, Seq[InstanceKey]]): Seq[InstanceKey] = {

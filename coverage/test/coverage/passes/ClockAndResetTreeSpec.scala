@@ -138,7 +138,7 @@ class ClockAndResetTreeSpec extends LeanTransformSpec(Seq(Dependency(ClockAndRes
     ))
   }
 
-  it should "analyze the AsyncQueueSink" ignore { // TODO
+  it should "analyze the AsyncQueueSink" in {
     val m = CircuitTarget("AsyncQueueSink").module("AsyncQueueSink")
     val state = compile(asyncQueueSink)
 
@@ -167,7 +167,7 @@ class ClockAndResetTreeSpec extends LeanTransformSpec(Seq(Dependency(ClockAndRes
     ))
   }
 
-  it should "analyze Rocket Chip generated for Firesim" ignore { // TODO
+  it should "analyze Rocket Chip generated for Firesim" in {
     val m = CircuitTarget("FireSim").module("FireSim")
     val state = compile(firesimRocket)
 

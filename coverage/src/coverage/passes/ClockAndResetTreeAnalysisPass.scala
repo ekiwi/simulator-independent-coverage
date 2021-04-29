@@ -14,10 +14,11 @@ import firrtl.options.Dependency
 
 import scala.collection.mutable
 
-case class ResetAnnotation(target: ReferenceTarget, source: String, isAsync: Boolean, inverted: Boolean = true) extends SingleTargetAnnotation[ReferenceTarget] {
+// TODO: distinguish sync vs async reset
+case class ResetAnnotation(target: ReferenceTarget, source: String, inverted: Boolean = false) extends SingleTargetAnnotation[ReferenceTarget] {
   override def duplicate(n: ReferenceTarget) = copy(target = n)
 }
-case class ClockAnnotation(target: ReferenceTarget, source: String, inverted: Boolean = true) extends SingleTargetAnnotation[ReferenceTarget] {
+case class ClockAnnotation(target: ReferenceTarget, source: String, inverted: Boolean = false) extends SingleTargetAnnotation[ReferenceTarget] {
   override def duplicate(n: ReferenceTarget) = copy(target = n)
 }
 case class ClockSourceAnnotation(target: ReferenceTarget, sinkCount: Int) extends SingleTargetAnnotation[ReferenceTarget] {
@@ -134,8 +135,8 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
     sinks.map(s => s.copy(inverted = s.inverted ^ inverted))
 
   private def addPrefix(name: String, t: Tree): Tree = {
-    val leaves = t.leaves.map(s => s.copy(prefix = name + "." + s.prefix))
-    val internal = t.internal.map(s => s.copy(prefix = name + "." + s.prefix))
+    val leaves = t.leaves.map(s => s.addPrefix(name))
+    val internal = t.internal.map(s => s.addPrefix(name))
     Tree(name + "." + t.source, t.sourceIsFinal, leaves, internal=internal)
   }
 
@@ -151,29 +152,62 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
       if(info.clockSinks > 0) {
         assert(!(info.resetSinks > 0), s"Tree starting at ${t.source} is used both as a reset and a clock!")
         assert(!(info.resetPortSink > 0), s"Tree starting at ${t.source} is used both as a reset and a clock!")
-        Some((ClockSourceAnnotation(target, info.clockSinks), t.sinks))
+        val sinks = t.sinks.map(s => SinkAnnoInfo(s.prefix, s.name, t.source, s.inverted, isClockNotReset = true))
+        Some((ClockSourceAnnotation(target, info.clockSinks), sinks))
       } else if(info.resetSinks > 0) {
         assert(!(info.clockPortSinks > 0), s"Tree starting at ${t.source} is used both as a reset and a clock!")
-        Some((ResetSourceAnnotation(target, info.resetSinks), t.sinks))
+        val sinks = t.sinks.map(s => SinkAnnoInfo(s.prefix, s.name, t.source, s.inverted, isClockNotReset = false))
+        Some((ResetSourceAnnotation(target, info.resetSinks), sinks))
       } else { None }
     }
 
     val sourceAnnos = sourceAnnosAndSinks.map(_._1)
-
-    // collect all instances
-    val topInstance = InstanceKey("", iGraph.top.module)
-    val topChildren = childInstances(topInstance.module)
-    val instances = topInstance +: topChildren.flatMap(onInstance("", _, childInstances))
-    val sinkAnnos = annotateSinks(instances, sourceAnnosAndSinks.flatMap(_._2))
+    val sinkAnnos = annotateSinks(CircuitTarget(iGraph.top.module), childInstances, sourceAnnosAndSinks.flatMap(_._2))
 
     sourceAnnos ++ sinkAnnos
   }
 
-  private def annotateSinks(instances: Seq[InstanceKey],sinks: Seq[Sink]): Seq[Annotation] = {
-    // TODO
-    List()
+  private case class SinkAnnoInfo(prefix: String, name: String, source: String, inverted: Boolean, isClockNotReset: Boolean)
+
+  private def annotateSinks(c: CircuitTarget, childInstances: Map[String, Seq[InstanceKey]], sinks: Seq[SinkAnnoInfo]): Seq[Annotation] = {
+    val topInstance = InstanceKey("", c.name)
+    val topChildren = childInstances(topInstance.module)
+    val instances = topInstance +: topChildren.flatMap(onInstance("", _, childInstances))
+
+    val moduleToInstances = instances.groupBy(_.module).toSeq.sortBy(_._1)
+    val instanceToSinks = sinks.groupBy(_.prefix)
+    moduleToInstances.flatMap { case (module, insts) =>
+      val instSinks = insts.map(i => instanceToSinks.getOrElse(i.name, List()))
+      // if the sinks are the same in all instances, we can just do module level annos
+      if(sameSinks(instSinks)) {
+        val m = c.module(module)
+        instSinks.head.map(makeSinkAnno(childInstances, m, _))
+      } else {
+        //instSinks.zip(insts).flatMap { case (sinks, inst) =>
+        //  val m = pathToTarget(inst.name)
+        //}
+        // TODO
+        ???
+      }
+
+    }
   }
 
+  private def makeSinkAnno(childInstances: Map[String, Seq[InstanceKey]], top: IsModule, info: SinkAnnoInfo): Annotation = {
+    val target = pathToTarget(childInstances, top, info.name.split('.').toList)
+    if(info.isClockNotReset) {
+      ClockAnnotation(target, source = info.source, inverted = info.inverted)
+    } else {
+      ResetAnnotation(target, source = info.source, inverted = info.inverted)
+    }
+  }
+
+  private def sameSinks(instSinks: Seq[Seq[SinkAnnoInfo]]): Boolean = {
+    require(instSinks.nonEmpty)
+    if(instSinks.length == 1) return true
+    val head = instSinks.head.toSet
+    instSinks.tail.forall(_.toSet == head)
+  }
 
   private def pathToTarget(childInstances: Map[String, Seq[InstanceKey]], top: IsModule, path: List[String]): ReferenceTarget = path match {
     case List(name) => top.ref(name)
@@ -259,7 +293,8 @@ private object ModuleTreeScanner {
   case class PortSink(p: ir.Port) extends SinkInfo { override def info = p.info ; override def isPort = true }
   case class InstSink(i: ir.DefInstance, port: String) extends SinkInfo { override def info = i.info ; override def isPort = true}
   case class Sink(name: String, prefix: String, inverted: Boolean, infos: Seq[SinkInfo]) {
-    def fullName: String = prefix + name
+    def addPrefix(p: String): Sink = if(prefix.isEmpty) { copy(prefix = p) } else { copy(prefix = p + "." + prefix) }
+    def fullName: String = if(prefix.isEmpty) { name } else { prefix + "." + name }
   }
   case class Tree(source: String, sourceIsFinal: Boolean, leaves: Seq[Sink], internal: Seq[Sink] = List()) {
     def sinks: Iterable[Sink] = leaves ++ internal

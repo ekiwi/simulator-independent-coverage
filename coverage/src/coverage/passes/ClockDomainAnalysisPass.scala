@@ -13,15 +13,10 @@ import firrtl.transforms.{ConstantPropagation, DeadCodeElimination, EnsureNamedS
 
 import scala.collection.mutable
 
-/** Analyses the Clock and Reset Domains of all Registers and Memories in the Circuit.
-  * TODO: is a synchronous reset a real reset?
-  * */
-object ClockAndResetAnalysisPass extends Transform with DependencyAPIMigration {
-  // we don't want to deal with non-ground types since clocks or resets could be part of a bundle
-  // TODO: can we run this analysis on high form?
-  //       the line coverage instrumentation pass needs to run before ExpandWhens and would benefit from this analysis
-  //       Potential fix: use undefined clock in line coverage pass, add fix-up pass to add correct clock
-  override def prerequisites = Forms.LowForm ++ Seq(Dependency(EnsureNamedStatements))
+/** Analyses the Clock Domains of all Signals in the Circuit. */
+object ClockDomainAnalysisPass extends Transform with DependencyAPIMigration {
+  override def prerequisites =
+    Seq(Dependency[passes.ExpandWhensAndCheck], Dependency(passes.LowerTypes), Dependency(ClockAndResetTreeAnalysisPass))
 
   // we do not change the circuit, only annotate the results, or throw errors
   override def invalidates(a: Transform) = false

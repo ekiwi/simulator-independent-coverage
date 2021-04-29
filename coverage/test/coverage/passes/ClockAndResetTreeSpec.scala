@@ -9,7 +9,7 @@ import firrtl.annotations._
 
 class ClockAndResetTreeSpec extends LeanTransformSpec(Seq(Dependency(ClockAndResetTreeAnalysisPass))) {
   behavior.of("ClockAndResetTreeAnalysis")
-  import ClockAndResetAnalysisExamples._
+  import ClockDomainAnalysisExamples._
   import ClockAndResetTreeExamples._
 
   it should "analyze a circuit with a single clock" in {

@@ -5,9 +5,9 @@ package coverage.passes
 import firrtl.FileUtils
 import firrtl.options.Dependency
 
-class ClockAndResetAnalysisSpec extends LeanTransformSpec(Seq(Dependency(ClockAndResetAnalysisPass))) {
-  behavior.of("ClockAndResetAnalysis")
-  import ClockAndResetAnalysisExamples._
+class ClockDomainAnalysisSpec extends LeanTransformSpec(Seq(Dependency(ClockDomainAnalysisPass))) {
+  behavior.of("ClockDomainAnalysis")
+  import ClockDomainAnalysisExamples._
 
   it should "analyze a circuit with a single clock" in {
     compile(inverter)
@@ -35,7 +35,7 @@ class ClockAndResetAnalysisSpec extends LeanTransformSpec(Seq(Dependency(ClockAn
 }
 
 
-object ClockAndResetAnalysisExamples {
+object ClockDomainAnalysisExamples {
   /* Original Chisel:
   class Inverter extends Module {
     val io = IO(new Bundle {

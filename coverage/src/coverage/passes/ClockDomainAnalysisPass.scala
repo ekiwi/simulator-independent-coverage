@@ -101,7 +101,7 @@ private object ModuleDomainScanner {
     val stateInputToDomain = m.stateUpdates.toSeq.flatMap { case (state, inputs) =>
       val domain = m.stateDomains(state)
       inputs.map(i => i -> domain)
-    }.groupBy(_._1).view.mapValues(_.map(_._2)).toMap
+    }.groupBy(_._1).map{ case (k,v) => k -> v.map(_._2) }
 
     val inputInfo = inputs.map { i => InputInfo(i, stateInputToDomain.getOrElse(i, List())) }
 

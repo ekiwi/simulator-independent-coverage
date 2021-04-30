@@ -97,8 +97,9 @@ class ToggleCoverageInstrumentationTest extends AnyFlatSpec with CompilerTest {
     // we expect the covered signals to be the following
     val expected = List(
       // all signals in the ToggleTestChild module
-      "ToggleTestChild.REG", "ToggleTestChild.g0.reset", "ToggleTestChild.in",
+      "ToggleTestChild.g0.reset", "ToggleTestChild.in",
       "ToggleTestChild.out0", "ToggleTestChild.out1",
+      "ToggleTestChild.out1_REG",
       "ToggleTestChild.reset",
       // all signals in the ToggleTestGrandChild module
       "ToggleTestGrandChild.reset",

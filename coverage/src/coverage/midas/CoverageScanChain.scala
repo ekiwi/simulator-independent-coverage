@@ -118,7 +118,7 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
             stmts.append(ir.Connect(ir.NoInfo, outPort, instanceOut))
 
             // we then add the counters and connection statements to the end of the module
-            val body = ir.Block(removedCovers, ir.Block(stmts))
+            val body = ir.Block(removedCovers, ir.Block(stmts.toSeq))
             // add ports
             val ports = mod.ports ++ scanChainPorts
 
@@ -150,7 +150,8 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     val update = Utils.mux(ctx.en, prev, Utils.mux(willOverflow, regRef, inc))
 
     val (reg, con) = Builder.makeRegister(cover.info, cover.name, prev.tpe, cover.clk, ctx.reset, init, update)
-    ctx.stmts.append(reg, con)
+    ctx.stmts.append(reg)
+    ctx.stmts.append(con)
 
     // the register might be shifted into the next reg in the chain
     regRef

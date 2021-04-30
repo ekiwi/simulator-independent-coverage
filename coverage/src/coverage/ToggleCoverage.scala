@@ -122,12 +122,13 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
     resolvePortAliases(c, newAnnos, portAliases, iGraph)
 
     val annos = newAnnos ++ ms.flatMap(_._3).toList ++ state.annotations
-    CircuitState(circuit, annos)
+    CircuitState(circuit, annos.toSeq)
   }
 
   private def resolvePortAliases(c: CircuitTarget, annos: Annos, iAliases: Map[String, PortAliases], iGraph: InstanceKeyGraph): Unit = {
     val signalToAnnoIds: Map[String, Seq[Int]] =
-      annos.zipWithIndex.flatMap{ case (a, i) => a.signals.map(s => s.toString() -> i) }.groupBy(_._1).mapValues(_.map(_._2))
+      annos.zipWithIndex.flatMap{ case (a, i) => a.signals.map(s => s.toString() -> i) }
+        .groupBy(_._1).map{ case (k,v) => k -> v.map(_._2).toSeq }
 
     // make alias table mutable, so that we can propagate aliase up the hierarchy
     val aliases = mutable.HashMap[String, PortAliases]() ++ iAliases

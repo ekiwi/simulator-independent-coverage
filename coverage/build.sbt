@@ -1,15 +1,15 @@
 name := "coverage"
-version := "0.1"
-scalaVersion := "2.12.13"
+version := "0.5-SNAPSHOT"
+scalaVersion := "2.13.5"
 
-scalacOptions := Seq("-deprecation", "-unchecked", "-Xsource:2.11")
+scalacOptions := Seq("-deprecation", "-unchecked", "-language:reflectiveCalls")
 
 // SNAPSHOT repositories
 resolvers += Resolver.sonatypeRepo("snapshots")
-
 libraryDependencies += "edu.berkeley.cs" %% "chisel3" % "3.5-SNAPSHOT"
 libraryDependencies += "edu.berkeley.cs" %% "chiseltest" % "0.5-SNAPSHOT"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.6" % Test
+addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % "3.5-SNAPSHOT" cross CrossVersion.full)
 
 scalaSource in Compile := baseDirectory.value / "src"
 resourceDirectory in Compile := baseDirectory.value / "src" / "resources"

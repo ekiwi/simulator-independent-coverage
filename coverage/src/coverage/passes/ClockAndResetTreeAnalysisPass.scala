@@ -106,7 +106,7 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
       }
     }
 
-    done
+    done.toSeq
   }
 
   private def expandTree(tree: Tree, sources: Map[String, Seq[Tree]]): (Boolean, Tree) = {

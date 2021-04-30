@@ -101,7 +101,7 @@ private object ModuleDomainScanner {
     val stateInputToDomain = m.stateUpdates.toSeq.flatMap { case (state, inputs) =>
       val domain = m.stateDomains(state)
       inputs.map(i => i -> domain)
-    }.groupBy(_._1).mapValues(_.map(_._2))
+    }.groupBy(_._1).view.mapValues(_.map(_._2)).toMap
 
     val inputInfo = inputs.map { i => InputInfo(i, stateInputToDomain.getOrElse(i, List())) }
 
@@ -112,7 +112,7 @@ private object ModuleDomainScanner {
       OutputInfo(o, DriverInfo(domains, deps))
     }
 
-    ModuleInfo(name, outputInfo, inputInfo)
+    ModuleInfo(name, outputInfo.toSeq, inputInfo.toSeq)
   }
 
   case class Clock(name: String, inverted: Boolean = false) {

@@ -150,7 +150,7 @@ object AliasAnalysis {
           aliases.foreach(a => signalToGroup(a) = groupId)
       }
     }
-    groups
+    groups.toSeq
   }
   private def getAliases(name: String, cons: Connects): List[String] = cons.get(name) match {
     case None => List(name)

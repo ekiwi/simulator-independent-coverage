@@ -124,15 +124,31 @@ object LineCoveragePass extends Transform with DependencyAPIMigration {
   private def onModule(m: ir.DefModule, c: CircuitTarget, annos: mutable.ListBuffer[Annotation], ignore: Set[String]): ir.DefModule =
     m match {
       case mod: ir.Module if !ignore(mod.name) =>
-        val namespace = Namespace(mod)
-        namespace.newName(Prefix)
-        val ctx = ModuleCtx(annos, namespace, c.module(mod.name), Builder.findClock(mod, mod.serialize))
-        // we always cover the body, even if the module only contains nodes and cover statements
-        val bodyInfo = onStmt(mod.body, ctx).copy(_2 = true)
-        val body = addCover(bodyInfo, ctx)
-        mod.copy(body = body)
+        findClock(mod) match {
+          case Some(clock) =>
+            val namespace = Namespace(mod)
+            namespace.newName(Prefix)
+            val ctx = ModuleCtx(annos, namespace, c.module(mod.name), clock)
+            // we always cover the body, even if the module only contains nodes and cover statements
+            val bodyInfo = onStmt(mod.body, ctx).copy(_2 = true)
+            val body = addCover(bodyInfo, ctx)
+            mod.copy(body = body)
+          case None =>
+            mod
+        }
       case other => other
     }
+
+  private def findClock(mod: ir.Module): Option[ir.RefLikeExpression] = {
+    val clocks = Builder.findClocks(mod)
+    if(clocks.isEmpty) {
+      logger.warn(s"WARN: [${mod.name}] found no clock input, skipping ...")
+    }
+    if(clocks.length > 1) {
+      logger.warn(s"WARN: [${mod.name}] found more than one clock, picking the first one: " + clocks.map(_.serialize).mkString(", "))
+    }
+    clocks.headOption
+  }
 
   private def onStmt(s: ir.Statement, ctx: ModuleCtx): (ir.Statement, Boolean, Seq[ir.Info]) = s match {
     case c @ ir.Conditionally(_, _, conseq, alt) =>

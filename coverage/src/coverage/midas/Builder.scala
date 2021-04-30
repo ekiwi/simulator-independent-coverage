@@ -11,13 +11,18 @@ import firrtl.annotations.{IsModule, ReferenceTarget}
   * Some of these convenience functions could be moved to firrtl at some point.
   */
 object Builder {
-  def findClock(m: ir.Module, msg: => String = ""): ir.RefLikeExpression = {
+  /** Fails if there isn't exactly one Clock input */
+  def findClock(m: ir.Module): ir.RefLikeExpression = {
+    val clocks = findClocks(m)
+    assert(clocks.length == 1, s"[${m.name}] This transformation only works if there is exactly one clock.\n" +
+      s"Found: ${clocks.map(_.serialize)}\n")
+    clocks.head
+  }
+
+  def findClocks(m: ir.Module): Seq[ir.RefLikeExpression] = {
     val ports = flattenedPorts(m.ports)
     val clockIO = ports.filter(_.tpe == ir.ClockType)
-    val clockInputs = clockIO.filter(_.flow == SourceFlow)
-    assert(clockInputs.length == 1, s"[${m.name}] This transformation only works if there is exactly one clock.\n" +
-      s"Found: ${clockInputs.map(_.serialize)}\n" + s"ports: ${ports.map(_.serialize)}\n" + msg)
-    clockInputs.head
+    clockIO.filter(_.flow == SourceFlow)
   }
 
   def refToTarget(module: IsModule, ref: ir.RefLikeExpression): ReferenceTarget = ref match {

@@ -15472,11 +15472,6 @@
         "name":"implicit_clock",
         "multiplier":1,
         "divisor":1
-      },
-      {
-        "name":"subsystem_mbus_0",
-        "multiplier":5,
-        "divisor":16
       }
     ]
   },
@@ -15490,17 +15485,11 @@
           "name":"implicit_clock",
           "multiplier":1,
           "divisor":1
-        },
-        {
-          "name":"subsystem_mbus_0",
-          "multiplier":5,
-          "divisor":16
         }
       ]
     },
     "sinks":[
-      "~FireSim|RationalClockBridge>clocks[0]",
-      "~FireSim|RationalClockBridge>clocks[1]"
+      "~FireSim|RationalClockBridge>clocks[0]"
     ]
   },
   {
@@ -31738,11 +31727,6 @@
         "name":"implicit_clock",
         "multiplier":1,
         "divisor":1
-      },
-      {
-        "name":"subsystem_mbus_0",
-        "multiplier":5,
-        "divisor":16
       }
     ]
   },
@@ -31756,17 +31740,11 @@
           "name":"implicit_clock",
           "multiplier":1,
           "divisor":1
-        },
-        {
-          "name":"subsystem_mbus_0",
-          "multiplier":5,
-          "divisor":16
         }
       ]
     },
     "sinks":[
-      "~FireSim|RationalClockBridge>clocks[0]",
-      "~FireSim|RationalClockBridge>clocks[1]"
+      "~FireSim|RationalClockBridge>clocks[0]"
     ]
   },
   {

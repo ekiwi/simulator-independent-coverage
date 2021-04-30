@@ -126,7 +126,7 @@ object LineCoveragePass extends Transform with DependencyAPIMigration {
       case mod: ir.Module if !ignore(mod.name) =>
         val namespace = Namespace(mod)
         namespace.newName(Prefix)
-        val ctx = ModuleCtx(annos, namespace, c.module(mod.name), Builder.findClock(mod))
+        val ctx = ModuleCtx(annos, namespace, c.module(mod.name), Builder.findClock(mod, mod.serialize))
         // we always cover the body, even if the module only contains nodes and cover statements
         val bodyInfo = onStmt(mod.body, ctx).copy(_2 = true)
         val body = addCover(bodyInfo, ctx)

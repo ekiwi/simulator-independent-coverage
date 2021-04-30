@@ -5,17 +5,38 @@
 package coverage.midas
 
 import firrtl._
+import firrtl.annotations.{IsModule, ReferenceTarget}
 
 /** Helps us construct well typed low-ish firrtl.
   * Some of these convenience functions could be moved to firrtl at some point.
   */
 object Builder {
-  def findClock(m: ir.Module): ir.Reference = {
-    val clockIO = m.ports.filter(_.tpe == ir.ClockType)
-    val clockInputs = clockIO.filter(_.direction == ir.Input)
-    assert(clockInputs.length == 1, s"[${m.name}] This transformation only works if there is exactly one clock: $clockInputs")
-    ir.Reference(clockInputs.head)
+  def findClock(m: ir.Module, msg: => String = ""): ir.RefLikeExpression = {
+    val ports = flattenedPorts(m.ports)
+    val clockIO = ports.filter(_.tpe == ir.ClockType)
+    val clockInputs = clockIO.filter(_.flow == SourceFlow)
+    assert(clockInputs.length == 1, s"[${m.name}] This transformation only works if there is exactly one clock.\n" +
+      s"Found: ${clockInputs.map(_.serialize)}\n" + s"ports: ${ports.map(_.serialize)}\n" + msg)
+    clockInputs.head
   }
+
+  def refToTarget(module: IsModule, ref: ir.RefLikeExpression): ReferenceTarget = ref match {
+    case ir.Reference(name, _, _, _) => module.ref(name)
+    case ir.SubField(expr, name, _, _) => refToTarget(module, expr.asInstanceOf[ir.RefLikeExpression]).field(name)
+    case ir.SubIndex(expr, value, _, _) => refToTarget(module, expr.asInstanceOf[ir.RefLikeExpression]).index(value)
+    case other => throw new RuntimeException(s"Unsupported reference expression: $other")
+  }
+
+  private def flattenedPorts(ports: Seq[ir.Port]): Seq[ir.RefLikeExpression] = {
+    ports.flatMap { p => expandRef(ir.Reference(p.name, p.tpe, PortKind, Utils.to_flow(p.direction))) }
+  }
+
+  private def expandRef(ref: ir.RefLikeExpression): Seq[ir.RefLikeExpression] = ref.tpe match {
+    case ir.BundleType(fields) =>
+      Seq(ref) ++ fields.flatMap(f => expandRef(ir.SubField(ref, f.name, f.tpe, Utils.times(f.flip, ref.flow))))
+    case _ => Seq(ref)
+  }
+
 
   def findReset(m: ir.Module): ir.Reference = {
     val inputs = m.ports.filter(_.direction == ir.Input)

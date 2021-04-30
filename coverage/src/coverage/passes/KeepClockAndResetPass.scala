@@ -34,7 +34,7 @@ object KeepClockAndResetPass extends Transform with DependencyAPIMigration {
       val clock = Builder.findClock(mod)
       val reset = Builder.findReset(mod)
       val mRef = c.module(mod.name)
-      List(clock, reset).map(e => DontTouchAnnotation(mRef.ref(e.name)))
+      List(clock, reset).map(e => DontTouchAnnotation(Builder.refToTarget(mRef, e)))
     case _ => List()
   }
 }

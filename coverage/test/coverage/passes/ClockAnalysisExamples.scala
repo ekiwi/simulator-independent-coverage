@@ -351,4 +351,5 @@ object ClockAnalysisExamples {
   def iCache: String = FileUtils.getTextResource("/regress/ICache.fir")
   def rocket: String = FileUtils.getTextResource("/regress/RocketCore.fir")
   def firesimRocket: String = FileUtils.getTextResource("/FireSimRocketConfig.fir")
+  def firesimRocketSingleClock: String = FileUtils.getTextResource("/FireSimRocketConfig.SingleClock.fir")
 }

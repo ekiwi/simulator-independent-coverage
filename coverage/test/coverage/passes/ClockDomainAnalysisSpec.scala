@@ -50,4 +50,8 @@ class ClockDomainAnalysisSpec extends LeanTransformSpec(Seq(Dependency(ClockDoma
   it should "analyze Rocket Chip generated for Firesim" ignore {
     compile(firesimRocket)
   }
+
+  it should "analyze Rocket Chip generated for Firesim with a single clock" ignore {
+    compile(firesimRocketSingleClock)
+  }
 }

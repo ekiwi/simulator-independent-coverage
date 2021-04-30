@@ -2,18 +2,37 @@
 
 package coverage.passes
 
+import firrtl.annotations.CircuitTarget
 import firrtl.options.Dependency
 
 class ClockDomainAnalysisSpec extends LeanTransformSpec(Seq(Dependency(ClockDomainAnalysisPass))) {
   behavior.of("ClockDomainAnalysis")
   import ClockAnalysisExamples._
 
-  it should "analyze a circuit with a single clock" in {
-    compile(inverter)
+  it should "analyze a circuit with a single clock" ignore {
+    val m = CircuitTarget("Inverter").module("Inverter")
+    val state = compile(inverter)
+
+    // there is only a single clock!
+    assert(state.annotations.contains(
+      SingleClockModule(m)
+    ))
   }
 
-  it should "analyze a circuit with a single clock and reset" in {
-    compile(inverterWithReset)
+  it should "analyze a circuit with a single clock and reset" ignore {
+    val m = CircuitTarget("InverterWithReset").module("InverterWithReset")
+    val state = compile(inverterWithReset)
+
+    // there is only a single clock!
+    assert(state.annotations.contains(
+      SingleClockModule(m)
+    ))
+  }
+
+  it should "analyze a clock going through multiple modules (sideways)" in {
+    val m = CircuitTarget("PassThrough").module("PassThrough")
+    val state = compile(passThroughSideways)
+
   }
 
   it should "analyze the iCache" in {
@@ -28,7 +47,7 @@ class ClockDomainAnalysisSpec extends LeanTransformSpec(Seq(Dependency(ClockDoma
     compile(asyncQueueSink)
   }
 
-  it should "analyze Rocket Chip generated for Firesim" in {
+  it should "analyze Rocket Chip generated for Firesim" ignore {
     compile(firesimRocket)
   }
 }

@@ -42,14 +42,13 @@ object Builder {
     case _ => Seq(ref)
   }
 
-
-  def findReset(m: ir.Module): ir.Reference = {
-    val inputs = m.ports.filter(_.direction == ir.Input)
+  def findResets(m: ir.Module): Seq[ir.RefLikeExpression] = {
+    val ports = flattenedPorts(m.ports)
+    val inputs = ports.filter(_.flow == SourceFlow)
     val ofResetType = inputs.filter(p => p.tpe == ir.AsyncResetType || p.tpe == ir.ResetType)
-    val boolWithCorrectName = inputs.filter(p => p.tpe == ir.UIntType(ir.IntWidth(1)) && p.name == "reset")
+    val boolWithCorrectName = inputs.filter(p => p.tpe == ir.UIntType(ir.IntWidth(1)) && p.serialize.endsWith("reset"))
     val resetInputs = ofResetType ++ boolWithCorrectName
-    assert(resetInputs.length == 1, s"This transformation only works if there is exactly one reset: $resetInputs")
-    ir.Reference(resetInputs.head)
+    resetInputs
   }
 
   def reduceAnd(e: ir.Expression): ir.Expression = ir.DoPrim(PrimOps.Andr, List(e), List(), Utils.BoolType)

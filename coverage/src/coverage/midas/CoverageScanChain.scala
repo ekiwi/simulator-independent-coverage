@@ -4,7 +4,7 @@
 
 package coverage.midas
 
-import coverage.LineCoveragePass
+import coverage.{Coverage, LineCoveragePass}
 import firrtl._
 import firrtl.analyses.InstanceKeyGraph.InstanceKey
 import firrtl.annotations._
@@ -12,7 +12,7 @@ import firrtl.options.Dependency
 import firrtl.passes.ResolveFlows
 import firrtl.stage.Forms
 import firrtl.stage.TransformManager.TransformDependency
-import firrtl.transforms.EnsureNamedStatements
+import firrtl.transforms.{EnsureNamedStatements, PropagatePresetAnnotations}
 
 import scala.collection.mutable
 
@@ -37,7 +37,9 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
 
   override def prerequisites: Seq[TransformDependency] = Forms.LowForm ++ Seq(Dependency(EnsureNamedStatements))
   // every automatic coverage pass needs to run before this!
-  override def optionalPrerequisites = Seq(Dependency(LineCoveragePass))
+  override def optionalPrerequisites = (Seq(Dependency[PropagatePresetAnnotations]) ++
+    // we add our own registers with presets
+    Coverage.AllPasses)
   override def invalidates(a: Transform): Boolean = a match {
     case ResolveFlows => true // ir.Reference sets the flow to unknown
     case _            => false
@@ -53,16 +55,18 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     val opt = opts.headOption.getOrElse(CoverageScanChainOptions())
 
     // now we can create the chains and hook them up
-    val modulesAndInfo = state.circuit.modules.map(insertChain(_, prefixes, opt.counterWidth))
+    val c = CircuitTarget(state.circuit.main)
+    val modulesAndInfoAndAnnos = state.circuit.modules.map(insertChain(c, _, prefixes, opt.counterWidth))
 
-    val modules = modulesAndInfo.map(_._1)
+    val modules = modulesAndInfoAndAnnos.map(_._1)
     val circuit = state.circuit.copy(modules = modules)
 
-    val infos = modulesAndInfo.flatMap(_._2)
+    val infos = modulesAndInfoAndAnnos.flatMap(_._2)
+    val annos = modulesAndInfoAndAnnos.flatMap(_._3)
     val main = CircuitTarget(circuit.main).module(circuit.main)
     val anno = createChainAnnotation(main, infos, opt)
 
-    CircuitState(circuit, state.annotations :+ anno)
+    CircuitState(circuit, anno +:annos ++: state.annotations)
   }
 
   private def createChainAnnotation(
@@ -85,26 +89,27 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
 
   private case class ModuleInfo(name: String, prefix: String, covers: List[String], instances: List[InstanceKey])
   private def insertChain(
+    c: CircuitTarget,
     m:        ir.DefModule,
     prefixes: Map[String, String],
     width:    Int
-  ): (ir.DefModule, Option[ModuleInfo]) = m match {
-    case e:   ir.ExtModule => (e, None)
+  ): (ir.DefModule, Option[ModuleInfo], AnnotationSeq) = m match {
+    case e:   ir.ExtModule => (e, None, List())
     case mod: ir.Module =>
       val ctx = ModuleCtx(new Covers(), new Instances(), prefixes, width)
       // we first find and remove all cover statements and change the port definition of submodules
       val removedCovers = findCoversAndModifyInstancePorts(mod.body, ctx)
-      if (ctx.covers.isEmpty && ctx.instances.isEmpty) { (mod, None) }
+      if (ctx.covers.isEmpty && ctx.instances.isEmpty) { (mod, None, List()) }
       else {
-        val reset = Builder.findReset(mod)
         val scanChainPorts = getScanChainPorts(prefixes(mod.name), width)
         val portRefs = scanChainPorts.map(ir.Reference(_))
         portRefs match {
           case Seq(enPort, inPort, outPort) =>
             val stmts = mutable.ArrayBuffer[ir.Statement]()
+            val annos = mutable.ArrayBuffer[Annotation]()
 
             // now we generate counters for all cover points we removed
-            val counterCtx = CounterCtx(enPort, reset, stmts)
+            val counterCtx = CounterCtx(c.module(mod.name), enPort, stmts, annos)
             val counterOut =
               ctx.covers.foldLeft[ir.Expression](inPort)((prev, cover) => generateCounter(counterCtx, cover, prev))
 
@@ -128,12 +133,12 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
             val prefix = prefixes(mod.name)
             val info = ModuleInfo(mod.name, prefix, covers, instances)
 
-            (mod.copy(ports = ports, body = body), Some(info))
+            (mod.copy(ports = ports, body = body), Some(info), annos.toSeq)
         }
       }
   }
 
-  private case class CounterCtx(en: ir.Expression, reset: ir.Expression, stmts: mutable.ArrayBuffer[ir.Statement])
+  private case class CounterCtx(m: ModuleTarget, en: ir.Expression, stmts: mutable.ArrayBuffer[ir.Statement], annos: mutable.ArrayBuffer[Annotation])
 
   private def generateCounter(ctx: CounterCtx, cover: ir.Verification, prev: ir.Expression): ir.Expression = {
     assert(cover.op == ir.Formal.Cover)
@@ -149,9 +154,13 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     // we increment the counter when it is not being reset and the chain is not enabled
     val update = Utils.mux(ctx.en, prev, Utils.mux(willOverflow, regRef, inc))
 
-    val (reg, con) = Builder.makeRegister(cover.info, cover.name, prev.tpe, cover.clk, ctx.reset, init, update)
+    // counter register
+    val reg = ir.DefRegister(cover.info, cover.name, prev.tpe, cover.clk, Utils.False(), init)
     ctx.stmts.append(reg)
+    val con = ir.Connect(cover.info, ir.Reference(reg), update)
     ctx.stmts.append(con)
+    val presetAnno = MakePresetRegAnnotation(ctx.m.ref(reg.name))
+    ctx.annos.append(presetAnno)
 
     // the register might be shifted into the next reg in the chain
     regRef

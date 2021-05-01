@@ -82,9 +82,10 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     CoverageScanChainInfo(main, mainInfo.prefix, opt.counterWidth, covers)
   }
 
-  private def getCovers(name: String, prefix: String, ii: Map[String, ModuleInfo]): List[String] = {
-    val info = ii(name)
-    info.covers.map(prefix + _) ++ info.instances.flatMap(i => getCovers(i.module, prefix + i.name + ".", ii))
+  private def getCovers(name: String, prefix: String, ii: Map[String, ModuleInfo]): List[String] = ii.get(name) match {
+    case None => List()
+    case Some(info) =>
+      info.covers.map(prefix + _) ++ info.instances.flatMap(i => getCovers(i.module, prefix + i.name + ".", ii))
   }
 
   private case class ModuleInfo(name: String, prefix: String, covers: List[String], instances: List[InstanceKey])

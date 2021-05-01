@@ -28,7 +28,7 @@ object ToggleCoverage {
 
   def processCoverage(annos: AnnotationSeq): ToggleCoverageData = {
     val cov = Coverage.collectTestCoverage(annos).toMap
-    val moduleToInst = Coverage.collectModuleInstances(annos).groupBy(_._2).mapValues(_.map(_._1))
+    val moduleToInst = Coverage.collectModuleInstances(annos).groupBy(_._2).map{ case (k,v) => k -> v.map(_._1) }
     val infos = annos.collect { case a: ToggleCoverageAnnotation => a }
 
 

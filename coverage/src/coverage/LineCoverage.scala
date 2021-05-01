@@ -4,7 +4,7 @@
 
 package coverage
 
-import chiseltest.coverage.{CoverageInfo, ModuleInstancesPass}
+import chiseltest.coverage.CoverageInfo
 import coverage.midas.Builder
 import firrtl._
 import firrtl.annotations.{Annotation, CircuitTarget, ModuleTarget, ReferenceTarget, SingleTargetAnnotation}

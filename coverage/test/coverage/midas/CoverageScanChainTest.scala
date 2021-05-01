@@ -46,4 +46,16 @@ class CoverageScanChainTest extends AnyFlatSpec with CompilerTest {
     )
     assert(chainInfo.covers == expectedCovers)
   }
+
+  it should "initialize the counter registers in the Verilog" in {
+    val width = 30
+    val widthAnno = CoverageScanChainOptions(width)
+
+    val (result, rAnnos) = compile(new Test1Module(withSubmodules = true), "verilog", Seq(widthAnno))
+    // println(result)
+    val l = result.split('\n').map(_.trim)
+
+    // the coverage counter should be initialized to zero
+    assert(l.contains("reg [29:0] l_3 = 30'h0;"))
+  }
 }

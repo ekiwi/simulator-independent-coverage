@@ -10,6 +10,7 @@ import firrtl.analyses.InstanceKeyGraph.InstanceKey
 import firrtl.annotations._
 import firrtl.options.Dependency
 import firrtl.passes.ResolveFlows
+import firrtl.passes.wiring.WiringTransform
 import firrtl.stage.Forms
 import firrtl.stage.TransformManager.TransformDependency
 import firrtl.transforms.{EnsureNamedStatements, PropagatePresetAnnotations}
@@ -39,7 +40,10 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
   // every automatic coverage pass needs to run before this!
   override def optionalPrerequisites = (Seq(Dependency[PropagatePresetAnnotations]) ++
     // we add our own registers with presets
-    Coverage.AllPasses)
+    Coverage.AllPasses ++
+    // we need to run after the wiring transform
+    Seq(Dependency[WiringTransform])
+    )
   override def invalidates(a: Transform): Boolean = a match {
     case ResolveFlows => true // ir.Reference sets the flow to unknown
     case _            => false
@@ -95,47 +99,44 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     prefixes: Map[String, String],
     width:    Int
   ): (ir.DefModule, Option[ModuleInfo], AnnotationSeq) = m match {
-    case e:   ir.ExtModule => (e, None, List())
+    case e: ir.ExtModule => (e, None, List())
     case mod: ir.Module =>
       val ctx = ModuleCtx(new Covers(), new Instances(), prefixes, width)
       // we first find and remove all cover statements and change the port definition of submodules
       val removedCovers = findCoversAndModifyInstancePorts(mod.body, ctx)
-      if (ctx.covers.isEmpty && ctx.instances.isEmpty) { (mod, None, List()) }
-      else {
-        val scanChainPorts = getScanChainPorts(prefixes(mod.name), width)
-        val portRefs = scanChainPorts.map(ir.Reference(_))
-        portRefs match {
-          case Seq(enPort, inPort, outPort) =>
-            val stmts = mutable.ArrayBuffer[ir.Statement]()
-            val annos = mutable.ArrayBuffer[Annotation]()
+      val scanChainPorts = getScanChainPorts(prefixes(mod.name), width)
+      val portRefs = scanChainPorts.map(ir.Reference(_))
+      portRefs match {
+        case Seq(enPort, inPort, outPort) =>
+          val stmts = mutable.ArrayBuffer[ir.Statement]()
+          val annos = mutable.ArrayBuffer[Annotation]()
 
-            // now we generate counters for all cover points we removed
-            val counterCtx = CounterCtx(c.module(mod.name), enPort, stmts, annos)
-            val counterOut =
-              ctx.covers.foldLeft[ir.Expression](inPort)((prev, cover) => generateCounter(counterCtx, cover, prev))
+          // now we generate counters for all cover points we removed
+          val counterCtx = CounterCtx(c.module(mod.name), enPort, stmts, annos)
+          val counterOut =
+            ctx.covers.foldLeft[ir.Expression](inPort)((prev, cover) => generateCounter(counterCtx, cover, prev))
 
-            // we add the sub module to the end of the chain
-            val instanceCtx = InstanceCtx(prefixes, enPort, stmts)
-            val instanceOut = ctx.instances.foldLeft[ir.Expression](counterOut)((prev, inst) =>
-              connectInstance(instanceCtx, inst, prev)
-            )
+          // we add the sub module to the end of the chain
+          val instanceCtx = InstanceCtx(prefixes, enPort, stmts)
+          val instanceOut = ctx.instances.foldLeft[ir.Expression](counterOut)((prev, inst) =>
+            connectInstance(instanceCtx, inst, prev)
+          )
 
-            // finally we connect the outPort to the end of the chain
-            stmts.append(ir.Connect(ir.NoInfo, outPort, instanceOut))
+          // finally we connect the outPort to the end of the chain
+          stmts.append(ir.Connect(ir.NoInfo, outPort, instanceOut))
 
-            // we then add the counters and connection statements to the end of the module
-            val body = ir.Block(removedCovers, ir.Block(stmts.toSeq))
-            // add ports
-            val ports = mod.ports ++ scanChainPorts
+          // we then add the counters and connection statements to the end of the module
+          val body = ir.Block(removedCovers, ir.Block(stmts.toSeq))
+          // add ports
+          val ports = mod.ports ++ scanChainPorts
 
-            // build the module info
-            val covers = ctx.covers.map(_.name).toList
-            val instances = ctx.instances.map(i => InstanceKey(i.name, i.module)).toList
-            val prefix = prefixes(mod.name)
-            val info = ModuleInfo(mod.name, prefix, covers, instances)
+          // build the module info
+          val covers = ctx.covers.map(_.name).toList
+          val instances = ctx.instances.map(i => InstanceKey(i.name, i.module)).toList
+          val prefix = prefixes(mod.name)
+          val info = ModuleInfo(mod.name, prefix, covers, instances)
 
-            (mod.copy(ports = ports, body = body), Some(info), annos.toSeq)
-        }
+          (mod.copy(ports = ports, body = body), Some(info), annos.toSeq)
       }
   }
 

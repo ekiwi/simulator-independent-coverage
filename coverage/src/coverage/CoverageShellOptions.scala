@@ -4,6 +4,7 @@
 
 package coverage
 
+import coverage.midas.CoverageScanChainPass
 import firrtl.annotations.{CircuitTarget, ModuleTarget}
 import firrtl.options._
 import firrtl.stage.RunFirrtlTransformAnnotation
@@ -57,6 +58,11 @@ final class CoverageShellOptions extends RegisteredLibrary {
       longOption = "emit-cover-info",
       toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(CoverageInfoEmitter))),
       helpText = "write coverage information to a .cover.json file"
+    ),
+    new ShellOption[Unit](
+      longOption = "cover-scan-chain",
+      toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(CoverageScanChainPass))),
+      helpText = "replace all cover statements with hardware counters and a scan chain"
     ),
   )
 

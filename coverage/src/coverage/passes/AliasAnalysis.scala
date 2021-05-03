@@ -74,7 +74,7 @@ object AliasAnalysis {
   private def computePortAliases(groups: Seq[List[String]], isPort: String => Boolean): PortAliases = {
     groups.flatMap { g =>
       val ports = g.filter(isPort)
-      assert(ports.length < 4, s"Unexpected exponential blowup! Redesign the data-structure! $ports")
+      assert(ports.length < 32, s"Unexpected exponential blowup! Redesign the data-structure! $ports")
       ports.flatMap { a =>
         ports.flatMap { b =>
           if(a == b) None else Some(a -> b)

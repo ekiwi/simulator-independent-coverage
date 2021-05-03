@@ -143,8 +143,10 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     val ref = ir.Reference(inst)
     // instantiate
     stmts.append(inst)
+    // TODO: this is a hack!
+    val clockInput = ir.Reference("harnessClock", ir.ClockType, NodeKind)
     // connect clock and enable signal
-    stmts.append(ir.Connect(ir.NoInfo, ir.SubField(ref, "clock", ir.ClockType), ir.Reference("clock", ir.ClockType, PortKind)))
+    stmts.append(ir.Connect(ir.NoInfo, ir.SubField(ref, "clock", ir.ClockType), clockInput))
     stmts.append(ir.DefNode(ir.NoInfo, enRef.name, ir.SubField(ref, BridgeEnPort, Utils.BoolType)))
     stmts.append(ir.DefNode(ir.NoInfo, inRef.name, ir.UIntLiteral(0, counterTpe.width)))
     // return out ref

@@ -4,9 +4,11 @@
 
 package coverage
 
+import chiseltest.coverage.{CoverageInfo, ModuleInstancesAnnotation, TestCoverage}
+import coverage.midas.{CoverageScanChainInfo, CoverageScanChainPass}
 import firrtl._
 import firrtl.annotations.{JsonProtocol, NoTargetAnnotation}
-import firrtl.options.CustomFileEmission
+import firrtl.options.{CustomFileEmission, Dependency}
 import firrtl.options.Viewer.view
 import firrtl.stage.FirrtlOptions
 
@@ -14,15 +16,24 @@ import firrtl.stage.FirrtlOptions
 /** Serializes all relevant coverage annotations. */
 object CoverageInfoEmitter extends Transform with DependencyAPIMigration {
   override def prerequisites = Seq()
-  override def optionalPrerequisites = Coverage.AllPasses
+  override def optionalPrerequisites = Coverage.AllPasses ++ Seq(
+    Dependency(CoverageScanChainPass), Dependency(CoverageStatisticsPass), Dependency(ModuleInstancesPass)
+  )
   override def invalidates(a: Transform) = false
 
   override def execute(state: CircuitState): CircuitState = {
-    val annos = chiseltest.coverage.Coverage.collectCoverageAnnotations(state.annotations)
-    if(annos.nonEmpty) {
-      val str = JsonProtocol.serialize(annos)
+    val (covAnnos, otherAnnos) = state.annotations.partition {
+      case _: CoverageInfo => true
+      case _: TestCoverage => true
+      case _: ModuleInstancesAnnotation => true
+      case _: CoverageScanChainInfo => true
+      case _ => false
+    }
+
+    if(covAnnos.nonEmpty) {
+      val str = JsonProtocol.serialize(covAnnos)
       val out = EmittedCoverageInfo(str, state.circuit.main)
-      state.copy(annotations =  out +: state.annotations)
+      state.copy(annotations =  out +: otherAnnos)
     } else { state }
   }
 }

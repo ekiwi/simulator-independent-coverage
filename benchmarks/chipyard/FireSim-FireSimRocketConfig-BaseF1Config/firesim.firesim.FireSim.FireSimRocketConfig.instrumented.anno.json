@@ -604,6 +604,20 @@
     "target":"~FireSim|DCacheModuleImpl_Anon>l_50"
   },
   {
+    "class":"midas.widgets.SerializableBridgeAnnotation",
+    "target":"~FireSim|CoverageBridge",
+    "channelNames":[
+      "cover_en",
+      "cover_out"
+    ],
+    "widgetClass":"firesim.bridges.CoverageBridgeModule",
+    "widgetConstructorKey":{
+      "class":"coverage.midas.CoverageBridgeKey",
+      "counterWidth":32,
+      "coverCount":3691
+    }
+  },
+  {
     "class":"firrtl.annotations.PresetRegAnnotation",
     "target":"~FireSim|MSHR_3>l_150"
   },
@@ -722,6 +736,18 @@
   {
     "class":"firrtl.annotations.PresetRegAnnotation",
     "target":"~FireSim|CSRFile>l_1"
+  },
+  {
+    "class":"midas.passes.fame.FAMEChannelConnectionAnnotation",
+    "globalName":"cover_en",
+    "channelInfo":{
+      "class":"midas.passes.fame.PipeChannel",
+      "latency":1
+    },
+    "clock":"~FireSim|CoverageBridge>clock",
+    "sinks":[
+      "~FireSim|CoverageBridge>cover_en"
+    ]
   },
   {
     "class":"firrtl.annotations.PresetRegAnnotation",
@@ -3178,6 +3204,18 @@
   {
     "class":"firrtl.annotations.PresetRegAnnotation",
     "target":"~FireSim|TLInterconnectCoupler_2>l_0"
+  },
+  {
+    "class":"midas.passes.fame.FAMEChannelConnectionAnnotation",
+    "globalName":"cover_out",
+    "channelInfo":{
+      "class":"midas.passes.fame.PipeChannel",
+      "latency":1
+    },
+    "clock":"~FireSim|CoverageBridge>clock",
+    "sources":[
+      "~FireSim|CoverageBridge>cover_out"
+    ]
   },
   {
     "class":"firrtl.annotations.PresetRegAnnotation",

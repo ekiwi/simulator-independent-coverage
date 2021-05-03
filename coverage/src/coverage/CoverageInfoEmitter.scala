@@ -5,7 +5,7 @@
 package coverage
 
 import chiseltest.coverage.{CoverageInfo, ModuleInstancesAnnotation, TestCoverage}
-import coverage.midas.{CoverageScanChainInfo, CoverageScanChainPass}
+import coverage.midas.{CoverageScanChainInfo, CoverageScanChainOptions, CoverageScanChainPass}
 import firrtl._
 import firrtl.annotations.{JsonProtocol, NoTargetAnnotation}
 import firrtl.options.{CustomFileEmission, Dependency}
@@ -27,6 +27,7 @@ object CoverageInfoEmitter extends Transform with DependencyAPIMigration {
       case _: TestCoverage => true
       case _: ModuleInstancesAnnotation => true
       case _: CoverageScanChainInfo => true
+      case _: CoverageScanChainOptions => true
       case _ => false
     }
 

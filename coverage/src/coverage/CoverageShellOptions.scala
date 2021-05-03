@@ -4,7 +4,7 @@
 
 package coverage
 
-import coverage.midas.{CoverageScanChainPass, RemoveStatementNames}
+import coverage.midas.{CoverageScanChainOptions, CoverageScanChainPass, RemoveStatementNames}
 import firrtl.annotations.{CircuitTarget, ModuleTarget}
 import firrtl.options._
 import firrtl.stage.RunFirrtlTransformAnnotation
@@ -59,10 +59,11 @@ final class CoverageShellOptions extends RegisteredLibrary {
       toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(CoverageInfoEmitter))),
       helpText = "write coverage information to a .cover.json file"
     ),
-    new ShellOption[Unit](
+    new ShellOption[String](
       longOption = "cover-scan-chain",
-      toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(CoverageScanChainPass))),
-      helpText = "replace all cover statements with hardware counters and a scan chain"
+      toAnnotationSeq = a => Seq(RunFirrtlTransformAnnotation(Dependency(CoverageScanChainPass)),
+                                 CoverageScanChainOptions(a.toInt, addBridge=true)),
+      helpText = "replace all cover statements with hardware counters of <WIDTH> and a scan chain"
     ),
     new ShellOption[Unit](
       longOption = "remove-statement-names",

@@ -2056,6 +2056,9 @@
       },
       {
         "TracerVBridge":"TracerVBridge"
+      },
+      {
+        "CoverageBridge":"CoverageBridge"
       }
     ]
   },
@@ -67674,5 +67677,10 @@
         ]
       }
     ]
+  },
+  {
+    "class":"coverage.midas.CoverageScanChainOptions",
+    "counterWidth":32,
+    "addBridge":true
   }
 ]

@@ -34,7 +34,7 @@ case class CoverageScanChainInfo(target: ModuleTarget, prefix: String, width: In
   override def duplicate(n: ModuleTarget) = copy(target = n)
 }
 
-case class CoverageBridgeKey(counterWidth: Int, coverCount: Int)
+case class CoverageBridgeKey(counterWidth: Int, covers: List[String])
 
 /** Turns cover points into saturating hardware counters and builds a scan chain.
   * Should eventually be moved to midas/firesim.
@@ -76,7 +76,7 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
 
     // we generate an extmodule for the bridge
     val (bridgeMod, bridgeAnnos) = if(opt.addBridge) {
-      genBridgeModule(c, opt.counterWidth, anno.covers.size)
+      genBridgeModule(c, opt.counterWidth, anno.covers)
     } else {
       (None, List())
     }
@@ -110,11 +110,11 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
   private val BridgeEnPort = "cover_en"
   private val BridgeOutPort = "cover_out"
 
-  private def genBridgeModule(c: CircuitTarget, counterWidth: Int, coverCount: Int): (Option[ir.DefModule], List[Annotation]) = {
+  private def genBridgeModule(c: CircuitTarget, counterWidth: Int, covers: List[String]): (Option[ir.DefModule], List[Annotation]) = {
     val moduleName = "CoverageBridge"
     val m = c.module(moduleName)
     val widgetClass = "firesim.bridges.CoverageBridgeModule"
-    val key = CoverageBridgeKey(counterWidth, coverCount)
+    val key = CoverageBridgeKey(counterWidth, covers)
     val bridgeAnno = SerializableBridgeAnnotation(m, List(BridgeEnPort, BridgeOutPort), widgetClass, Some(key))
     val pipeChannel = PipeChannel(1)
     val enChannel = FAMEChannelConnectionAnnotation(BridgeEnPort, pipeChannel, Some(m.ref("clock")),

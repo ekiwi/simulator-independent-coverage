@@ -12357,11 +12357,6 @@
     "coverGenerated":true
   },
   {
-    "class":"firrtl.transforms.BlackBoxResourceAnno",
-    "target":"FireSim.plusarg_reader",
-    "resourceId":"/vsrc/plusarg_reader.v"
-  },
-  {
     "class":"chisel3.experimental.EnumAnnotations$EnumVecAnnotation",
     "target":"FireSim.TileResetDomain.auto.tile_trace_core_source_out.group",
     "typeName":"freechips.rocketchip.util.TraceItype",
@@ -14411,11 +14406,6 @@
     "target":"FireSim.TLBuffer_17"
   },
   {
-    "class":"firrtl.transforms.BlackBoxResourceAnno",
-    "target":"FireSim.plusarg_reader_1",
-    "resourceId":"/vsrc/plusarg_reader.v"
-  },
-  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|TLUART>_out_T_9",
     "clock":"~FireSim|TLUART>clock",
@@ -16245,10 +16235,6 @@
     "target":"~FireSim|FireSim>_WIRE_2",
     "clock":"~FireSim|FireSim>_WIRE_4",
     "sourceType":false
-  },
-  {
-    "class":"firrtl.stage.RunFirrtlTransformAnnotation",
-    "transform":"firrtl.transforms.BlackBoxSourceHelper"
   },
   {
     "class":"firrtl.stage.RunFirrtlTransformAnnotation",
@@ -28612,11 +28598,6 @@
     "coverGenerated":true
   },
   {
-    "class":"firrtl.transforms.BlackBoxResourceAnno",
-    "target":"FireSim.plusarg_reader",
-    "resourceId":"/vsrc/plusarg_reader.v"
-  },
-  {
     "class":"chisel3.experimental.EnumAnnotations$EnumVecAnnotation",
     "target":"FireSim.TileResetDomain.auto.tile_trace_core_source_out.group",
     "typeName":"freechips.rocketchip.util.TraceItype",
@@ -30666,11 +30647,6 @@
     "target":"FireSim.TLBuffer_17"
   },
   {
-    "class":"firrtl.transforms.BlackBoxResourceAnno",
-    "target":"FireSim.plusarg_reader_1",
-    "resourceId":"/vsrc/plusarg_reader.v"
-  },
-  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|TLUART>_out_T_9",
     "clock":"~FireSim|TLUART>clock",
@@ -32500,10 +32476,6 @@
     "target":"~FireSim|FireSim>_WIRE_2",
     "clock":"~FireSim|FireSim>_WIRE_4",
     "sourceType":false
-  },
-  {
-    "class":"firrtl.stage.RunFirrtlTransformAnnotation",
-    "transform":"firrtl.transforms.BlackBoxSourceHelper"
   },
   {
     "class":"firrtl.stage.RunFirrtlTransformAnnotation",

@@ -109,13 +109,13 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
   private val BridgeModuleName = "CoverageBridge"
   private val BridgeEnPort = "cover_en"
   private val BridgeOutPort = "cover_out"
+  private val BridgeWidgetClass = "coverage.midas.CoverageBridgeModule"
 
   private def genBridgeModule(c: CircuitTarget, counterWidth: Int, covers: List[String]): (Option[ir.DefModule], List[Annotation]) = {
     val moduleName = "CoverageBridge"
     val m = c.module(moduleName)
-    val widgetClass = "firesim.bridges.CoverageBridgeModule"
     val key = CoverageBridgeKey(counterWidth, covers)
-    val bridgeAnno = SerializableBridgeAnnotation(m, List(BridgeEnPort, BridgeOutPort), widgetClass, Some(key))
+    val bridgeAnno = SerializableBridgeAnnotation(m, List(BridgeEnPort, BridgeOutPort), BridgeWidgetClass, Some(key))
     val pipeChannel = PipeChannel(1)
     val enChannel = FAMEChannelConnectionAnnotation(BridgeEnPort, pipeChannel, Some(m.ref("clock")),
       sinks= Some(List(m.ref(BridgeEnPort))), sources =None)

@@ -82,8 +82,8 @@ object FsmCoveragePass extends Transform with DependencyAPIMigration {
     val intToState = states.toSeq.map{ case (k,v) => v -> k }.toMap
     val transitions = destructMux(next)
     transitions.foreach { case (guard, nx) =>
-      val gs = guardStates(guard, regDef.name, intToState)
-      //println(s"${guard.serialize} --> ${nx.serialize}")
+      val gs = guardStates(guard, regDef.name, intToState).getOrElse(states.keySet)
+      println(s"${guard.serialize} --> ${nx.serialize}")
       println(s" ${gs} --> ${nextStates(nx, regDef.name, intToState, gs)}")
     }
   }
@@ -101,24 +101,40 @@ object FsmCoveragePass extends Transform with DependencyAPIMigration {
     case r: ir.Reference if r.name == name => guards
     case _ => states.values.toSet
   }
-  private def guardStates(e: ir.Expression, name: String, states: Map[BigInt, String]): Set[String] = e match {
+  private def guardStates(e: ir.Expression, name: String, states: Map[BigInt, String]): Option[Set[String]] = e match {
     case ir.DoPrim(PrimOps.Eq, Seq(r: ir.Reference, c: ir.UIntLiteral), _, _) if r.name == name =>
-      Set(states(c.value))
+      Some(Set(states(c.value)))
     case ir.DoPrim(PrimOps.Eq, Seq(c: ir.UIntLiteral, r: ir.Reference), _, _) if r.name == name =>
-      Set(states(c.value))
+      Some(Set(states(c.value)))
     case ir.DoPrim(PrimOps.Neq, Seq(r: ir.Reference, c: ir.UIntLiteral), _, _) if r.name == name =>
-      states.values.toSet -- Set(states(c.value))
+      Some(states.values.toSet -- Set(states(c.value)))
     case ir.DoPrim(PrimOps.Neq, Seq(c: ir.UIntLiteral, r: ir.Reference), _, _) if r.name == name =>
-      states.values.toSet -- Set(states(c.value))
+      Some(states.values.toSet -- Set(states(c.value)))
     case ir.DoPrim(PrimOps.Or, Seq(a, b), _, _) =>
       val aStates = guardStates(a, name, states)
       val bStates = guardStates(b, name, states)
-      aStates | bStates
+      (aStates, bStates) match {
+        case (None, None) => None
+        case (None, a) => a
+        case (a, None) => a
+        case (Some(a), Some(b)) => Some(a | b)
+      }
     case ir.DoPrim(PrimOps.And, Seq(a, b), _, _) =>
       val aStates = guardStates(a, name, states)
       val bStates = guardStates(b, name, states)
-      aStates & bStates
-    case other => states.values.toSet // conservative: any state
+      (aStates, bStates) match {
+        case (None, None) => None
+        case (None, a) => a
+        case (a, None) => a
+        case (Some(a), Some(b)) => Some(a & b)
+      }
+    case ir.DoPrim(PrimOps.Not, Seq(a), _, _) =>
+      val aStates = guardStates(a, name, states)
+      aStates match {
+        case Some(s) => Some(states.values.toSet -- s)
+        case None => None
+      }
+    case other => None// no states
   }
 
   private def toReferenceTarget(n: Named): ReferenceTarget = n match {

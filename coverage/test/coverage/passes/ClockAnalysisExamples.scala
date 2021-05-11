@@ -1,6 +1,7 @@
 package coverage.passes
 
-import firrtl.FileUtils
+import firrtl.annotations.JsonProtocol
+import firrtl.{AnnotationSeq, FileUtils}
 
 /** Collection of example circuits used for testing both the [[ClockAndResetTreeAnalysisPass]] and the [[ClockDomainAnalysisPass]] */
 object ClockAnalysisExamples {
@@ -352,4 +353,8 @@ object ClockAnalysisExamples {
   def rocket: String = FileUtils.getTextResource("/regress/RocketCore.fir")
   def firesimRocket: String = FileUtils.getTextResource("/FireSimRocketConfig.fir")
   def firesimRocketSingleClock: String = FileUtils.getTextResource("/FireSimRocketConfig.SingleClock.fir")
+  def firesimRocketSingleClockAnnos: AnnotationSeq = {
+    val str = FileUtils.getTextResource("/FireSimRocketConfig.SingleClock.anno.json")
+    JsonProtocol.deserialize(str)
+  }
 }

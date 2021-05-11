@@ -83,7 +83,7 @@ object FsmCoveragePass extends Transform with DependencyAPIMigration {
     val transitions = destructMux(next)
     transitions.foreach { case (guard, nx) =>
       val gs = guardStates(guard, regDef.name, intToState).getOrElse(states.keySet)
-      println(s"${guard.serialize} --> ${nx.serialize}")
+      // println(s"${guard.serialize} --> ${nx.serialize}")
       println(s" ${gs} --> ${nextStates(nx, regDef.name, intToState, gs)}")
     }
   }

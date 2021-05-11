@@ -31,3 +31,16 @@ class SingleClockLineCoverageTest extends LeanTransformSpec(Seq(Dependency(LineC
     }
   }
 }
+
+
+class SingleClockFsmCoverageTest extends LeanTransformSpec(Seq(Dependency(FsmCoveragePass), Dependency(CoverageStatisticsPass))) {
+  behavior of "FsmCoverage"
+
+  it should "instrument a single clock FireSim design" in {
+    val m = CircuitTarget("FireSim").module("FireSim")
+    val ll = LogLevel.Warn
+    val state = Logger.makeScope(Seq(LogLevelAnnotation(ll))) {
+      compile(ClockAnalysisExamples.firesimRocketSingleClock, ClockAnalysisExamples.firesimRocketSingleClockAnnos)
+    }
+  }
+}

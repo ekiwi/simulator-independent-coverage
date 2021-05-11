@@ -4201,6 +4201,21 @@
     "target":"~FireSim|DCache>io.cpu.s1_data"
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.TLB.state",
+    "enumTypeName":"freechips.rocketchip.rocket.TLBState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumDefAnnotation",
+    "typeName":"freechips.rocketchip.rocket.TLBState",
+    "definition":{
+      "s_ready":0,
+      "s_request":1,
+      "s_wait":2,
+      "s_wait_invalidate":3
+    }
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|PMPChecker>_res_T",
     "clock":"~FireSim|PMPChecker>clock",
@@ -5425,6 +5440,11 @@
     "coverGenerated":true
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.TLB._state_T",
+    "enumTypeName":"freechips.rocketchip.rocket.TLBState"
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|TLB>_T_1327",
     "clock":"~FireSim|TLB>clock",
@@ -5495,6 +5515,11 @@
     "label":"DTLB_MULTIPLE_HITS",
     "message":"MemorySystem;;Two matching translations in TLB",
     "coverGenerated":true
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.DCacheModuleImpl_Anon.state",
+    "enumTypeName":"freechips.rocketchip.rocket.TLBState"
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
@@ -6721,6 +6746,11 @@
     "coverGenerated":true
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.DCacheModuleImpl_Anon._state_T",
+    "enumTypeName":"freechips.rocketchip.rocket.TLBState"
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|DCacheModuleImpl_Anon>_T_1327",
     "clock":"~FireSim|DCacheModuleImpl_Anon>clock",
@@ -6825,6 +6855,27 @@
     "target":"FireSim.DCacheModuleImpl_Anon_2"
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.DCache.release_state",
+    "enumTypeName":"freechips.rocketchip.rocket.DCacheModuleState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumDefAnnotation",
+    "typeName":"freechips.rocketchip.rocket.DCacheModuleState",
+    "definition":{
+      "s_probe_write_meta":7,
+      "s_voluntary_writeback":1,
+      "s_voluntary_release":9,
+      "s_ready":0,
+      "s_dummy":8,
+      "s_probe_rep_dirty":2,
+      "s_probe_retry":4,
+      "s_probe_rep_clean":3,
+      "s_probe_rep_miss":5,
+      "s_voluntary_write_meta":6
+    }
+  },
+  {
     "class":"firrtl.transforms.DontTouchAnnotation",
     "target":"~FireSim|DCache>s2_valid_cached_miss"
   },
@@ -6867,6 +6918,26 @@
     "label":"DCACHE_BLOCK_D",
     "message":"MemorySystem;;D$ D-channel blocked",
     "coverGenerated":true
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.DCache._release_state_T_12",
+    "enumTypeName":"freechips.rocketchip.rocket.DCacheModuleState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.DCache._release_state_T_13",
+    "enumTypeName":"freechips.rocketchip.rocket.DCacheModuleState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.DCache._release_state_T_14",
+    "enumTypeName":"freechips.rocketchip.rocket.DCacheModuleState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.DCache._release_state_T_15",
+    "enumTypeName":"freechips.rocketchip.rocket.DCacheModuleState"
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
@@ -7243,6 +7314,11 @@
     "label":"mem_active_data_uncorrectable_error_tag_error_from_CPU_cache_mode",
     "message":"MemorySystem;;Memory Bit Flip Cross Covers <mem_active> X <data_uncorrectable_error> X <tag_error> X <from_CPU> X <cache_mode>",
     "coverGenerated":true
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.TLB_1.state",
+    "enumTypeName":"freechips.rocketchip.rocket.TLBState"
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
@@ -8469,6 +8545,11 @@
     "coverGenerated":true
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.TLB_1._state_T",
+    "enumTypeName":"freechips.rocketchip.rocket.TLBState"
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|TLB_1>_T_1327",
     "clock":"~FireSim|TLB_1>clock",
@@ -8699,6 +8780,25 @@
     "coverGenerated":true
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.PTW.state",
+    "enumTypeName":"freechips.rocketchip.rocket.PTWState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumDefAnnotation",
+    "typeName":"freechips.rocketchip.rocket.PTWState",
+    "definition":{
+      "s_fragment_superpage":7,
+      "s_wait2":4,
+      "s_ready":0,
+      "s_wait1":2,
+      "s_dummy1":3,
+      "s_req":1,
+      "s_dummy2":6,
+      "s_wait3":5
+    }
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|PTW>_T_65",
     "clock":"~FireSim|PTW>clock",
@@ -8736,8 +8836,38 @@
     "coverGenerated":true
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.PTW.next_state",
+    "enumTypeName":"freechips.rocketchip.rocket.PTWState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.OptimizationBarrier_117.io.y",
+    "enumTypeName":"freechips.rocketchip.rocket.PTWState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.OptimizationBarrier_117.io.x",
+    "enumTypeName":"freechips.rocketchip.rocket.PTWState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.PTW._next_state_T",
+    "enumTypeName":"freechips.rocketchip.rocket.PTWState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.PTW._next_state_T_1",
+    "enumTypeName":"freechips.rocketchip.rocket.PTWState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.PTW._next_state_T_2",
+    "enumTypeName":"freechips.rocketchip.rocket.PTWState"
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_181",
+    "target":"~FireSim|PTW>_T_191",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L0",
@@ -8746,7 +8876,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_183",
+    "target":"~FireSim|PTW>_T_193",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L0_BAD_PPN_MSB",
@@ -8755,7 +8885,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_186",
+    "target":"~FireSim|PTW>_T_196",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L0_INVALID_PTE",
@@ -8764,7 +8894,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_190",
+    "target":"~FireSim|PTW>_T_200",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L0_BAD_PPN_LSB",
@@ -8773,7 +8903,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_193",
+    "target":"~FireSim|PTW>_T_203",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L1",
@@ -8782,7 +8912,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_195",
+    "target":"~FireSim|PTW>_T_205",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L1_BAD_PPN_MSB",
@@ -8791,7 +8921,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_198",
+    "target":"~FireSim|PTW>_T_208",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L1_INVALID_PTE",
@@ -8800,7 +8930,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_202",
+    "target":"~FireSim|PTW>_T_212",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L1_BAD_PPN_LSB",
@@ -8809,7 +8939,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_205",
+    "target":"~FireSim|PTW>_T_215",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L2",
@@ -8818,7 +8948,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_207",
+    "target":"~FireSim|PTW>_T_217",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L2_BAD_PPN_MSB",
@@ -8827,7 +8957,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_210",
+    "target":"~FireSim|PTW>_T_220",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L2_INVALID_PTE",
@@ -8836,7 +8966,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_219",
+    "target":"~FireSim|PTW>_T_229",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_TOO_DEEP",
@@ -8854,7 +8984,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_221",
+    "target":"~FireSim|PTW>_T_231",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_AE",
@@ -8970,6 +9100,22 @@
         "freqErrorPPM":10000.0,
         "jitterPS":200.0
       }
+    }
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.CSRFile.xcause_dest",
+    "enumTypeName":"freechips.rocketchip.rocket.CSRFileCause"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumDefAnnotation",
+    "typeName":"freechips.rocketchip.rocket.CSRFileCause",
+    "definition":{
+      "uCause":4,
+      "sCause":3,
+      "noCause":0,
+      "hCause":2,
+      "mCause":1
     }
   },
   {
@@ -12204,6 +12350,40 @@
     "coverGenerated":true
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.MulDiv.state",
+    "enumTypeName":"freechips.rocketchip.rocket.MulDivState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumDefAnnotation",
+    "typeName":"freechips.rocketchip.rocket.MulDivState",
+    "definition":{
+      "s_div":3,
+      "s_neg_inputs":1,
+      "s_mul":2,
+      "s_done_mul":6,
+      "s_ready":0,
+      "s_dummy":4,
+      "s_neg_output":5,
+      "s_done_div":7
+    }
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.MulDiv._state_T",
+    "enumTypeName":"freechips.rocketchip.rocket.MulDivState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.MulDiv._state_T_2",
+    "enumTypeName":"freechips.rocketchip.rocket.MulDivState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.MulDiv._state_T_3",
+    "enumTypeName":"freechips.rocketchip.rocket.MulDivState"
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|Rocket>_T_47",
     "clock":"~FireSim|Rocket>clock",
@@ -12355,6 +12535,11 @@
     "label":"WRITEBACK_LOAD_PAGE_FAULT",
     "message":"",
     "coverGenerated":true
+  },
+  {
+    "class":"firrtl.transforms.BlackBoxResourceAnno",
+    "target":"FireSim.plusarg_reader",
+    "resourceId":"/vsrc/plusarg_reader.v"
   },
   {
     "class":"chisel3.experimental.EnumAnnotations$EnumVecAnnotation",
@@ -14406,6 +14591,11 @@
     "target":"FireSim.TLBuffer_17"
   },
   {
+    "class":"firrtl.transforms.BlackBoxResourceAnno",
+    "target":"FireSim.plusarg_reader_1",
+    "resourceId":"/vsrc/plusarg_reader.v"
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|TLUART>_out_T_9",
     "clock":"~FireSim|TLUART>clock",
@@ -16235,6 +16425,10 @@
     "target":"~FireSim|FireSim>_WIRE_2",
     "clock":"~FireSim|FireSim>_WIRE_4",
     "sourceType":false
+  },
+  {
+    "class":"firrtl.stage.RunFirrtlTransformAnnotation",
+    "transform":"firrtl.transforms.BlackBoxSourceHelper"
   },
   {
     "class":"firrtl.stage.RunFirrtlTransformAnnotation",
@@ -20442,6 +20636,21 @@
     "target":"~FireSim|DCache>io.cpu.s1_data"
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.TLB.state",
+    "enumTypeName":"freechips.rocketchip.rocket.TLBState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumDefAnnotation",
+    "typeName":"freechips.rocketchip.rocket.TLBState",
+    "definition":{
+      "s_ready":0,
+      "s_request":1,
+      "s_wait":2,
+      "s_wait_invalidate":3
+    }
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|PMPChecker>_res_T",
     "clock":"~FireSim|PMPChecker>clock",
@@ -21666,6 +21875,11 @@
     "coverGenerated":true
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.TLB._state_T",
+    "enumTypeName":"freechips.rocketchip.rocket.TLBState"
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|TLB>_T_1327",
     "clock":"~FireSim|TLB>clock",
@@ -21736,6 +21950,11 @@
     "label":"DTLB_MULTIPLE_HITS",
     "message":"MemorySystem;;Two matching translations in TLB",
     "coverGenerated":true
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.DCacheModuleImpl_Anon.state",
+    "enumTypeName":"freechips.rocketchip.rocket.TLBState"
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
@@ -22962,6 +23181,11 @@
     "coverGenerated":true
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.DCacheModuleImpl_Anon._state_T",
+    "enumTypeName":"freechips.rocketchip.rocket.TLBState"
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|DCacheModuleImpl_Anon>_T_1327",
     "clock":"~FireSim|DCacheModuleImpl_Anon>clock",
@@ -23066,6 +23290,27 @@
     "target":"FireSim.DCacheModuleImpl_Anon_2"
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.DCache.release_state",
+    "enumTypeName":"freechips.rocketchip.rocket.DCacheModuleState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumDefAnnotation",
+    "typeName":"freechips.rocketchip.rocket.DCacheModuleState",
+    "definition":{
+      "s_probe_write_meta":7,
+      "s_voluntary_writeback":1,
+      "s_voluntary_release":9,
+      "s_ready":0,
+      "s_dummy":8,
+      "s_probe_rep_dirty":2,
+      "s_probe_retry":4,
+      "s_probe_rep_clean":3,
+      "s_probe_rep_miss":5,
+      "s_voluntary_write_meta":6
+    }
+  },
+  {
     "class":"firrtl.transforms.DontTouchAnnotation",
     "target":"~FireSim|DCache>s2_valid_cached_miss"
   },
@@ -23108,6 +23353,26 @@
     "label":"DCACHE_BLOCK_D",
     "message":"MemorySystem;;D$ D-channel blocked",
     "coverGenerated":true
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.DCache._release_state_T_12",
+    "enumTypeName":"freechips.rocketchip.rocket.DCacheModuleState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.DCache._release_state_T_13",
+    "enumTypeName":"freechips.rocketchip.rocket.DCacheModuleState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.DCache._release_state_T_14",
+    "enumTypeName":"freechips.rocketchip.rocket.DCacheModuleState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.DCache._release_state_T_15",
+    "enumTypeName":"freechips.rocketchip.rocket.DCacheModuleState"
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
@@ -23484,6 +23749,11 @@
     "label":"mem_active_data_uncorrectable_error_tag_error_from_CPU_cache_mode",
     "message":"MemorySystem;;Memory Bit Flip Cross Covers <mem_active> X <data_uncorrectable_error> X <tag_error> X <from_CPU> X <cache_mode>",
     "coverGenerated":true
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.TLB_1.state",
+    "enumTypeName":"freechips.rocketchip.rocket.TLBState"
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
@@ -24710,6 +24980,11 @@
     "coverGenerated":true
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.TLB_1._state_T",
+    "enumTypeName":"freechips.rocketchip.rocket.TLBState"
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|TLB_1>_T_1327",
     "clock":"~FireSim|TLB_1>clock",
@@ -24940,6 +25215,25 @@
     "coverGenerated":true
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.PTW.state",
+    "enumTypeName":"freechips.rocketchip.rocket.PTWState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumDefAnnotation",
+    "typeName":"freechips.rocketchip.rocket.PTWState",
+    "definition":{
+      "s_fragment_superpage":7,
+      "s_wait2":4,
+      "s_ready":0,
+      "s_wait1":2,
+      "s_dummy1":3,
+      "s_req":1,
+      "s_dummy2":6,
+      "s_wait3":5
+    }
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|PTW>_T_65",
     "clock":"~FireSim|PTW>clock",
@@ -24977,8 +25271,38 @@
     "coverGenerated":true
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.PTW.next_state",
+    "enumTypeName":"freechips.rocketchip.rocket.PTWState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.OptimizationBarrier_117.io.y",
+    "enumTypeName":"freechips.rocketchip.rocket.PTWState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.OptimizationBarrier_117.io.x",
+    "enumTypeName":"freechips.rocketchip.rocket.PTWState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.PTW._next_state_T",
+    "enumTypeName":"freechips.rocketchip.rocket.PTWState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.PTW._next_state_T_1",
+    "enumTypeName":"freechips.rocketchip.rocket.PTWState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.PTW._next_state_T_2",
+    "enumTypeName":"freechips.rocketchip.rocket.PTWState"
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_181",
+    "target":"~FireSim|PTW>_T_191",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L0",
@@ -24987,7 +25311,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_183",
+    "target":"~FireSim|PTW>_T_193",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L0_BAD_PPN_MSB",
@@ -24996,7 +25320,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_186",
+    "target":"~FireSim|PTW>_T_196",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L0_INVALID_PTE",
@@ -25005,7 +25329,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_190",
+    "target":"~FireSim|PTW>_T_200",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L0_BAD_PPN_LSB",
@@ -25014,7 +25338,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_193",
+    "target":"~FireSim|PTW>_T_203",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L1",
@@ -25023,7 +25347,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_195",
+    "target":"~FireSim|PTW>_T_205",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L1_BAD_PPN_MSB",
@@ -25032,7 +25356,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_198",
+    "target":"~FireSim|PTW>_T_208",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L1_INVALID_PTE",
@@ -25041,7 +25365,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_202",
+    "target":"~FireSim|PTW>_T_212",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L1_BAD_PPN_LSB",
@@ -25050,7 +25374,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_205",
+    "target":"~FireSim|PTW>_T_215",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L2",
@@ -25059,7 +25383,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_207",
+    "target":"~FireSim|PTW>_T_217",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L2_BAD_PPN_MSB",
@@ -25068,7 +25392,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_210",
+    "target":"~FireSim|PTW>_T_220",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_L2_INVALID_PTE",
@@ -25077,7 +25401,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_219",
+    "target":"~FireSim|PTW>_T_229",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_TOO_DEEP",
@@ -25095,7 +25419,7 @@
   },
   {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
-    "target":"~FireSim|PTW>_T_221",
+    "target":"~FireSim|PTW>_T_231",
     "clock":"~FireSim|PTW>clock",
     "reset":"~FireSim|PTW>reset",
     "label":"PTW_AE",
@@ -25211,6 +25535,22 @@
         "freqErrorPPM":10000.0,
         "jitterPS":200.0
       }
+    }
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.CSRFile.xcause_dest",
+    "enumTypeName":"freechips.rocketchip.rocket.CSRFileCause"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumDefAnnotation",
+    "typeName":"freechips.rocketchip.rocket.CSRFileCause",
+    "definition":{
+      "uCause":4,
+      "sCause":3,
+      "noCause":0,
+      "hCause":2,
+      "mCause":1
     }
   },
   {
@@ -28445,6 +28785,40 @@
     "coverGenerated":true
   },
   {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.MulDiv.state",
+    "enumTypeName":"freechips.rocketchip.rocket.MulDivState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumDefAnnotation",
+    "typeName":"freechips.rocketchip.rocket.MulDivState",
+    "definition":{
+      "s_div":3,
+      "s_neg_inputs":1,
+      "s_mul":2,
+      "s_done_mul":6,
+      "s_ready":0,
+      "s_dummy":4,
+      "s_neg_output":5,
+      "s_done_div":7
+    }
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.MulDiv._state_T",
+    "enumTypeName":"freechips.rocketchip.rocket.MulDivState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.MulDiv._state_T_2",
+    "enumTypeName":"freechips.rocketchip.rocket.MulDivState"
+  },
+  {
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"FireSim.MulDiv._state_T_3",
+    "enumTypeName":"freechips.rocketchip.rocket.MulDivState"
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|Rocket>_T_47",
     "clock":"~FireSim|Rocket>clock",
@@ -28596,6 +28970,11 @@
     "label":"WRITEBACK_LOAD_PAGE_FAULT",
     "message":"",
     "coverGenerated":true
+  },
+  {
+    "class":"firrtl.transforms.BlackBoxResourceAnno",
+    "target":"FireSim.plusarg_reader",
+    "resourceId":"/vsrc/plusarg_reader.v"
   },
   {
     "class":"chisel3.experimental.EnumAnnotations$EnumVecAnnotation",
@@ -30647,6 +31026,11 @@
     "target":"FireSim.TLBuffer_17"
   },
   {
+    "class":"firrtl.transforms.BlackBoxResourceAnno",
+    "target":"FireSim.plusarg_reader_1",
+    "resourceId":"/vsrc/plusarg_reader.v"
+  },
+  {
     "class":"midas.targetutils.AutoCounterFirrtlAnnotation",
     "target":"~FireSim|TLUART>_out_T_9",
     "clock":"~FireSim|TLUART>clock",
@@ -32476,6 +32860,10 @@
     "target":"~FireSim|FireSim>_WIRE_2",
     "clock":"~FireSim|FireSim>_WIRE_4",
     "sourceType":false
+  },
+  {
+    "class":"firrtl.stage.RunFirrtlTransformAnnotation",
+    "transform":"firrtl.transforms.BlackBoxSourceHelper"
   },
   {
     "class":"firrtl.stage.RunFirrtlTransformAnnotation",

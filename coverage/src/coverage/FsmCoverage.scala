@@ -5,7 +5,6 @@
 package coverage
 
 import chisel3.experimental.EnumAnnotations.{EnumComponentAnnotation, EnumDefAnnotation}
-import coverage.FsmInfoPass.onModule
 import firrtl.annotations.{Annotation, CircuitTarget, ComponentName, ModuleTarget, Named, ReferenceTarget, SingleTargetAnnotation}
 import firrtl._
 import firrtl.options.Dependency

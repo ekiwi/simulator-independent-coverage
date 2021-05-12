@@ -155,33 +155,62 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
     case ir.DoPrim(PrimOps.Or, Seq(a, b), _, _) =>
       val aStates = guardStates(a, name, states)
       val bStates = guardStates(b, name, states)
-      (aStates, bStates) match {
-        case (None, None) => None
-        case (None, a) => a
-        case (a, None) => a
-        case (Some(a), Some(b)) => Some(a | b)
-      }
+      combineOr(aStates, bStates)
     case ir.DoPrim(PrimOps.And, Seq(a, b), _, _) =>
       val aStates = guardStates(a, name, states)
       val bStates = guardStates(b, name, states)
-      (aStates, bStates) match {
-        case (None, None) => None
-        case (None, a) => a
-        case (a, None) => a
-        case (Some(a), Some(b)) => Some(a & b)
-      }
+      combineAnd(aStates, bStates)
     case ir.DoPrim(PrimOps.Not, Seq(a), _, _) =>
       val aStates = guardStates(a, name, states)
       aStates match {
         case Some(s) => Some(states.values.toSet -- s)
         case None => None
       }
+    // try to analyze the following pattern
+    // orr(cat(cat(eq(release_state, UInt(9)), eq(release_state, UInt(6))), eq(release_state, UInt(1))))
+    case ir.DoPrim(PrimOps.Orr, Seq(s @ ir.DoPrim(PrimOps.Cat, _, _, _)), _, tpe) =>
+      val bits = getCatBits(s)
+      bits.foreach { b =>
+        assert(firrtl.bitWidth(b.tpe) == 1, s"Cannot deal with concatenated value ${b.serialize}")
+      }
+
+      val sts = bits.map(guardStates(_, name, states))
+      if(sts.length == 1) {
+        sts.head
+      } else {
+        sts.reduce(combineOr)
+      }
     case other =>
       val symbols = findSymbols(other)
       if(symbols.contains(name)) {
+        // throw new RuntimeException(s"failed to analyze:\n" + other.serialize)
         logger.warn("[FSM] over-approximating the states")
         Some(states.values.toSet)
       } else { None } // no states
+  }
+
+  private def combineOr(aStates: Option[Set[String]], bStates: Option[Set[String]]): Option[Set[String]] = {
+    (aStates, bStates) match {
+      case (None, None) => None
+      case (None, a) => a
+      case (a, None) => a
+      case (Some(a), Some(b)) => Some(a | b)
+    }
+  }
+
+  private def combineAnd(aStates: Option[Set[String]], bStates: Option[Set[String]]): Option[Set[String]] = {
+    (aStates, bStates) match {
+      case (None, None) => None
+      case (None, a) => a
+      case (a, None) => a
+      case (Some(a), Some(b)) => Some(a & b)
+    }
+  }
+
+  private def getCatBits(e: ir.Expression): List[ir.Expression] = e match {
+    case ir.DoPrim(PrimOps.Cat, Seq(msb, lsb), _, _) =>
+      getCatBits(msb) ++ getCatBits(lsb)
+    case other => List(other)
   }
 
   private def findSymbols(e: ir.Expression): Seq[String] = e match {

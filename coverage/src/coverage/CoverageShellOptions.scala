@@ -4,7 +4,7 @@
 
 package coverage
 
-import coverage.midas.{CoverageScanChainOptions, CoverageScanChainPass, RemoveStatementNames}
+import coverage.midas.{CoverageScanChainOptions, CoverageScanChainPass, RemoveBlackboxAnnotations, RemoveStatementNames}
 import firrtl.annotations.{CircuitTarget, ModuleTarget}
 import firrtl.options._
 import firrtl.stage.RunFirrtlTransformAnnotation
@@ -69,6 +69,11 @@ final class CoverageShellOptions extends RegisteredLibrary {
       longOption = "remove-statement-names",
       toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(RemoveStatementNames))),
       helpText = "ensures that the output can be parsed by a firrt 1.4 compiler which does not support named statements"
+    ),
+    new ShellOption[Unit](
+      longOption = "remove-blackbox-annos",
+      toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(RemoveBlackboxAnnotations))),
+      helpText = "removes all Blackbox resource annotations"
     ),
   )
 

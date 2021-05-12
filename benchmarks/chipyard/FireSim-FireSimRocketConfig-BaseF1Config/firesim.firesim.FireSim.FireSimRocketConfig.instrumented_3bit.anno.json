@@ -1,9 +1,5 @@
 [
   {
-    "class":"firrtl.stage.FirrtlFileAnnotation",
-    "file":"benchmarks/chipyard/FireSim-FireSimRocketConfig-BaseF1Config/firesim.firesim.FireSim.FireSimRocketConfig.instrumented_3bit.fir.lo.fir"
-  },
-  {
     "class":"firrtl.annotations.PresetRegAnnotation",
     "target":"~FireSim|QueueCompatibility_18>l_0"
   },
@@ -35525,12 +35521,6 @@
         }
       ],
       "maxChannelDecoupling":2
-    }
-  },
-  {
-    "class":"logger.LogLevelAnnotation",
-    "globalLogLevel":{
-      
     }
   },
   {

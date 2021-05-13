@@ -23,15 +23,15 @@ class VCDParser(vcdvcd.StreamParserCallbacks):
         pass #print('{} {} {}'.format(time, value, identifier_code))
 
 
-VerilogTemplate = """`timescale 1ns/10ps
+VerilogTemplate = """
 module {top}TB();
     reg clock = 0;
     always #2 clock <= ~clock;
     {input_regs}
 
     {top} dut (
-        .clock(clock),
-        {connections}
+.clock(clock),
+{connections}
     );
 
     integer fp;
@@ -43,7 +43,7 @@ module {top}TB();
         end
 
         while (! $feof(fp)) begin
-          $fscan(fp, {scan});
+          $fscanf(fp, {scan});
           @(posedge clock);
         end
         $fclose(fp);
@@ -55,13 +55,98 @@ def make_verilog_testbench(filename, top, inputs):
     input_file = "input.txt"
     input_regs = "\n".join(f"reg [{w-1}:0] {n};" for n,w in inputs)
     connections = "\n".join(f".{n}({n})," for n,w in inputs)
-    scan_str = '"' + " ".join("%b" for _ in inputs) + '", '
+    scan_str = '"' + " ".join("%x" for _ in inputs) + '", '
     scan = scan_str + ", ".join(n for n,_ in inputs)
 
     with open(filename, "w") as f:
         f.write(VerilogTemplate.format(
             top=top, input_file=input_file, input_regs=input_regs,
             connections=connections, scan=scan
+        ))
+
+VerilatorTemplate = """
+#include <verilated.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <iostream>
+#include "V{top}.h"
+#if VM_TRACE
+# include <verilated_vcd_c.h> // Trace file format header
+#endif
+
+#define TOP_TYPE V{top}
+
+// Current simulation time
+vluint64_t main_time = 0;
+// Called by $time in Verilog
+double sc_time_stamp() {{
+    return main_time;
+}}
+
+
+int main(int argc, char **argv, char **env) {{
+    // Prevent unused variable warnings
+    if (false && argc && argv && env) {{}}
+    Verilated::debug(0);
+
+    Verilated::commandArgs(argc, argv);
+    TOP_TYPE* top = new TOP_TYPE;
+
+    // If verilator was invoked with --trace
+#if VM_TRACE
+    Verilated::traceEverOn(true);
+    VerilatedVcdC* tfp = new VerilatedVcdC;
+    top->trace(tfp, 99);
+    tfp->open("dump.vcd");
+#endif
+
+{input_vars}    
+
+{update}
+
+    // load data from file
+    FILE* pFile = fopen("{input_file}", "r");
+    if(pFile == nullptr) {{
+        std::cerr << "Could not open {input_file}" << std::endl;
+    }}
+
+    while (!Verilated::gotFinish()) {{ // no timeout
+        main_time++;
+        top->clock = !top->clock;
+        if (!top->clock) {{ // after negative edge
+
+fscanf(pFile, {scan});
+{update}
+
+        }}
+        top->eval();
+    }}
+    top->final();
+
+#if VM_COVERAGE
+    VerilatedCov::write("coverage.dat");
+#endif
+#if VM_TRACE
+    if (tfp) {{ tfp->close(); }}
+#endif
+
+    delete top;
+    exit(0);
+}}
+
+"""
+
+def make_verilator_testbench(filename, top, inputs):
+    input_file = "input.txt"
+    input_vars = "\n".join(f"uint64_t {n} = 0;" for n,_ in inputs)
+    update = "\n".join(f"top->{n} = {n};" for n,_ in inputs)
+    scan_str = '"' + " ".join("%x" for _ in inputs) + '", '
+    scan = scan_str + ", ".join(n for n,_ in inputs)
+
+    with open(filename, "w") as f:
+        f.write(VerilatorTemplate.format(
+            top=top, input_file=input_file, input_vars=input_vars,
+            update=update, scan=scan
         ))
 
 
@@ -100,6 +185,7 @@ def parse_args():
     parser.add_argument('-v', '--vcd', help="input vcd", required=True)
     parser.add_argument('-f', '--firrtl', help="firrtl of the design in the VCD", required=True)
     parser.add_argument('--tbv', help="filename for the verilog testbench")
+    parser.add_argument('--tbcc', help="filename for the verilator C++ testbench")
     args =  parser.parse_args()
 
     if not os.path.isfile(args.vcd):
@@ -108,15 +194,17 @@ def parse_args():
     if not os.path.isfile(args.firrtl):
         raise RuntimeError(f"Wasn't able to find FIRRTL {args.firrtl}")
 
-    return args.vcd, args.firrtl, args.tbv
+    return args.vcd, args.firrtl, args.tbv, args.tbcc
 
 
 
 def main():
-    vcdfile, firrtlfile, tbv = parse_args()
+    vcdfile, firrtlfile, tbv, tbcc = parse_args()
     inputs, top = parse_firrtl(firrtlfile)
-    if len(tbv) > 0:
+    if tbv is not None:
         make_verilog_testbench(tbv, top, inputs)
+    if tbcc is not None:
+        make_verilator_testbench(tbcc, top, inputs)
     parsed = vcdvcd.VCDVCD(vcdfile, callbacks=VCDParser([i[0] for i in inputs], top), store_tvs=False)
 
 if __name__ == '__main__':

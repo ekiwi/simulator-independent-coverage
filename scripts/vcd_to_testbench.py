@@ -198,13 +198,14 @@ def parse_firrtl(filename: str):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--vcd', help="input vcd", required=True)
-    parser.add_argument('-f', '--firrtl', help="firrtl of the design in the VCD", required=True)
+    parser.add_argument('-f', '--firrtl', help="firrtl of the design in the VCD")
     parser.add_argument('--tbv', help="filename for the verilog testbench")
     parser.add_argument('--tbcc', help="filename for the verilator C++ testbench")
     parser.add_argument('--inputs', help="filename for inputs.txt stimuli file")
     args =  parser.parse_args()
 
-    if not os.path.isfile(args.vcd):
+    if args.vcd is not None:
+      if not os.path.isfile(args.vcd):
         raise RuntimeError(f"Wasn't able to find VCD {args.vcd}")
 
     if not os.path.isfile(args.firrtl):
@@ -222,7 +223,8 @@ def main():
     if tbcc is not None:
         make_verilator_testbench(tbcc, top, inputs)
     if inputs_file is not None:
-        parsed = vcdvcd.VCDVCD(vcdfile, callbacks=VCDParser([i[0] for i in inputs], top, inputs_file), store_tvs=False)
+        assert vcdfile is not None, f"Need to provide a VCD file to generate an inputs file!"
+        vcdvcd.VCDVCD(vcdfile, callbacks=VCDParser([i[0] for i in inputs], top, inputs_file), store_tvs=False)
 
 if __name__ == '__main__':
     main()

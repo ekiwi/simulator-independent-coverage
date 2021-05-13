@@ -4,23 +4,35 @@ import argparse
 import vcdvcd
 
 class VCDParser(vcdvcd.StreamParserCallbacks):
-    def __init__(self, inputs, top):
+    def __init__(self, inputs, top, inputs_file):
         super().__init__()
         self.inputs = inputs
         self.top = top
-        self.watch = set()
+        self.id_to_index = {}
+        self.out = open(inputs_file, "w")
+        self.values = [0 for _ in self.inputs]
+        self.last_write = -1
+
+    def write_to_file(self, time):
+        while time > self.last_write:
+            self.last_write += 2
+            line = " ".join(f"{v:02X}" for v in self.values)
+            self.out.write(line + "\n")
 
     def enddefinitions(self, vcd, signals, cur_sig_vals):
         # find our inputs
+        index = 0
         for ii in self.inputs:
             # we do a fuzzy match since e.g. verilator might add some hierarchy above the module we care about
             candidates = [k for k in vcd.references_to_ids.keys() if ii in k]
             smallest = sorted(candidates, key=lambda e: len(e))[0]
-            self.watch.add(vcd.references_to_ids[smallest])
-
+            self.id_to_index[vcd.references_to_ids[smallest]] = index
+            index += 1
 
     def value(self, vcd, time, value, identifier_code, cur_sig_vals):
-        pass #print('{} {} {}'.format(time, value, identifier_code))
+        self.write_to_file(time)
+        if identifier_code in self.id_to_index:
+            self.values[self.id_to_index[identifier_code]] = int(value, 2)
 
 
 VerilogTemplate = """
@@ -52,7 +64,7 @@ endmodule
 """
 
 def make_verilog_testbench(filename, top, inputs):
-    input_file = "input.txt"
+    input_file = "inputs.txt"
     input_regs = "\n".join(f"reg [{w-1}:0] {n};" for n,w in inputs)
     connections = "\n".join(f".{n}({n})," for n,w in inputs)
     scan_str = '"' + " ".join("%x" for _ in inputs) + '", '
@@ -110,7 +122,7 @@ int main(int argc, char **argv, char **env) {{
         std::cerr << "Could not open {input_file}" << std::endl;
     }}
 
-    while (!Verilated::gotFinish()) {{ // no timeout
+    while (!Verilated::gotFinish() && !feof(pFile)) {{
         main_time++;
         top->clock = !top->clock;
         if (!top->clock) {{ // after negative edge
@@ -120,6 +132,9 @@ fscanf(pFile, {scan});
 
         }}
         top->eval();
+#if VM_TRACE
+        if (tfp) tfp->dump(main_time);
+#endif
     }}
     top->final();
 
@@ -137,11 +152,11 @@ fscanf(pFile, {scan});
 """
 
 def make_verilator_testbench(filename, top, inputs):
-    input_file = "input.txt"
+    input_file = "inputs.txt"
     input_vars = "\n".join(f"uint64_t {n} = 0;" for n,_ in inputs)
     update = "\n".join(f"top->{n} = {n};" for n,_ in inputs)
-    scan_str = '"' + " ".join("%x" for _ in inputs) + '", '
-    scan = scan_str + ", ".join(n for n,_ in inputs)
+    scan_str = '"' + " ".join("%x" for _ in inputs) + '\\n", '
+    scan = scan_str + ", ".join(f"&{n}" for n,_ in inputs)
 
     with open(filename, "w") as f:
         f.write(VerilatorTemplate.format(
@@ -186,6 +201,7 @@ def parse_args():
     parser.add_argument('-f', '--firrtl', help="firrtl of the design in the VCD", required=True)
     parser.add_argument('--tbv', help="filename for the verilog testbench")
     parser.add_argument('--tbcc', help="filename for the verilator C++ testbench")
+    parser.add_argument('--inputs', help="filename for inputs.txt stimuli file")
     args =  parser.parse_args()
 
     if not os.path.isfile(args.vcd):
@@ -194,18 +210,19 @@ def parse_args():
     if not os.path.isfile(args.firrtl):
         raise RuntimeError(f"Wasn't able to find FIRRTL {args.firrtl}")
 
-    return args.vcd, args.firrtl, args.tbv, args.tbcc
+    return args.vcd, args.firrtl, args.tbv, args.tbcc, args.inputs
 
 
 
 def main():
-    vcdfile, firrtlfile, tbv, tbcc = parse_args()
+    vcdfile, firrtlfile, tbv, tbcc, inputs_file = parse_args()
     inputs, top = parse_firrtl(firrtlfile)
     if tbv is not None:
         make_verilog_testbench(tbv, top, inputs)
     if tbcc is not None:
         make_verilator_testbench(tbcc, top, inputs)
-    parsed = vcdvcd.VCDVCD(vcdfile, callbacks=VCDParser([i[0] for i in inputs], top), store_tvs=False)
+    if inputs_file is not None:
+        parsed = vcdvcd.VCDVCD(vcdfile, callbacks=VCDParser([i[0] for i in inputs], top, inputs_file), store_tvs=False)
 
 if __name__ == '__main__':
     main()

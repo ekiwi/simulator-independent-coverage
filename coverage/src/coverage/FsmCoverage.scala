@@ -183,7 +183,7 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
     case other =>
       val symbols = findSymbols(other)
       if(symbols.contains(name)) {
-        // throw new RuntimeException(s"failed to analyze:\n" + other.serialize)
+        throw new RuntimeException(s"failed to analyze:\n" + other.serialize)
         logger.warn("[FSM] over-approximating the states")
         Some(states.values.toSet)
       } else { None } // no states
@@ -237,15 +237,39 @@ private class ModuleScanner(localComponents: Map[String, EnumComponentAnnotation
   def run(mod: ir.Module): Seq[EnumReg] = {
     mod.foreachStmt(onStmt)
     regDefs.keys.toSeq.map { key =>
-      val next = inlineComb(connects(key))
+      val (next, _) = inlineComb(connects(key), key)
       EnumReg(localComponents(key).enumTypeName, regDefs(key), next)
     }
   }
 
-  /** resolves references to nodes (all wires should have been removed at this point) */
-  private def inlineComb(e: ir.Expression): ir.Expression = e match {
-    case r: ir.Reference if r.kind == firrtl.NodeKind => inlineComb(connects(r.name))
-    case other => other.mapExpr(inlineComb)
+  /** resolves references to nodes (all wires should have been removed at this point)
+   *  Ignores any subexpressions that do not actually contain references to the state register.
+   * */
+  private def inlineComb(e: ir.Expression, stateReg: String): (ir.Expression, Boolean) = e match {
+    case r: ir.Reference if r.kind == firrtl.NodeKind =>
+      val (e, shouldInline) = inlineComb(connects(r.name), stateReg)
+      if(shouldInline) { (e, true) } else { (r, false) }
+    case r: ir.Reference if r.name == stateReg => (r, true)
+    // registers are always plain references, so any RefLikeExpression that gets here is not a state register
+    case r: ir.RefLikeExpression => (r, false)
+    case p : ir.DoPrim =>
+      val c = p.args.map(inlineComb(_, stateReg))
+      val shouldInline = c.exists(_._2)
+      if(shouldInline) { (p.copy(args = c.map(_._1)), true) } else { (p, false) }
+    case m @ ir.Mux(cond, tval, fval, tpe) =>
+      val c = Seq(cond, tval, fval).map(inlineComb(_, stateReg))
+      val shouldInline = c.exists(_._2)
+      if(shouldInline) {
+        (ir.Mux(c(0)._1, c(1)._1, c(2)._1, tpe), true)
+      } else { (m, false) }
+    case v@ ir.ValidIf(cond, value, tpe) =>
+      val c = Seq(cond, value).map(inlineComb(_, stateReg))
+      val shouldInline = c.exists(_._2)
+      if(shouldInline) {
+        (ir.ValidIf(c(0)._1, c(1)._1, tpe), true)
+      } else { (v, false) }
+    case l: ir.Literal => (l, false)
+    case other => throw new RuntimeException(s"Unexpected expression $other")
   }
   private def onStmt(s: ir.Statement): Unit = s match {
     case r: ir.DefRegister if localComponents.contains(r.name) => regDefs(r.name) = r

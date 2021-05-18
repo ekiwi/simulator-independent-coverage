@@ -183,8 +183,8 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
     case other =>
       val symbols = findSymbols(other)
       if(symbols.contains(name)) {
-        throw new RuntimeException(s"failed to analyze:\n" + other.serialize)
-        logger.warn("[FSM] over-approximating the states")
+        // throw new RuntimeException(s"failed to analyze:\n" + other.serialize)
+        // logger.warn("[FSM] over-approximating the states")
         Some(states.values.toSet)
       } else { None } // no states
   }

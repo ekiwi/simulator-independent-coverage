@@ -357,4 +357,9 @@ object ClockAnalysisExamples {
     val str = FileUtils.getTextResource("/FireSimRocketConfig.SingleClock.anno.json")
     JsonProtocol.deserialize(str)
   }
+  def riscvMini: String = FileUtils.getTextResource("/RiscVMiniTileTester.fir")
+  def riscvMiniAnnos: AnnotationSeq = {
+    val str = FileUtils.getTextResource("/RiscVMiniTileTester.fsm.json")
+    JsonProtocol.deserialize(str)
+  }
 }

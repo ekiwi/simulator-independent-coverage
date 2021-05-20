@@ -5,6 +5,7 @@
 package coverage
 
 import coverage.midas.{CoverageScanChainOptions, CoverageScanChainPass, RemoveBlackboxAnnotations, RemoveStatementNames}
+import coverage.passes.RandomStateInit
 import firrtl.annotations.{CircuitTarget, ModuleTarget}
 import firrtl.options._
 import firrtl.stage.RunFirrtlTransformAnnotation
@@ -74,6 +75,11 @@ final class CoverageShellOptions extends RegisteredLibrary {
       longOption = "remove-blackbox-annos",
       toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(RemoveBlackboxAnnotations))),
       helpText = "removes all Blackbox resource annotations"
+    ),
+    new ShellOption[Unit](
+      longOption = "random-state-init",
+      toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(RandomStateInit))),
+      helpText = "initializes registers and memories with random (at compile time) values"
     ),
   )
 

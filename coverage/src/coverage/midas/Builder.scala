@@ -6,6 +6,7 @@ package coverage.midas
 
 import firrtl._
 import firrtl.annotations.{IsModule, ReferenceTarget}
+import logger.Logger
 
 import scala.collection.mutable
 
@@ -19,6 +20,17 @@ object Builder {
     assert(clocks.length == 1, s"[${m.name}] This transformation only works if there is exactly one clock.\n" +
       s"Found: ${clocks.map(_.serialize)}\n")
     clocks.head
+  }
+
+  def findClock(mod: ir.Module, logger: Logger): Option[ir.RefLikeExpression] = {
+    val clocks = Builder.findClocks(mod)
+    if(clocks.isEmpty) {
+      logger.warn(s"WARN: [${mod.name}] found no clock input, skipping ...")
+    }
+    if(clocks.length > 1) {
+      logger.warn(s"WARN: [${mod.name}] found more than one clock, picking the first one: " + clocks.map(_.serialize).mkString(", "))
+    }
+    clocks.headOption
   }
 
   def findClocks(m: ir.Module): Seq[ir.RefLikeExpression] = {

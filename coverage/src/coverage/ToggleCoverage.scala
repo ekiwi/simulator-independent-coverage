@@ -191,18 +191,22 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
         val signals = filterSignals(allSignals, opt)
 
         if(signals.isEmpty) { (mod, List(), None) } else {
-          val namespace = Namespace(mod)
-          namespace.newName(Prefix)
-          // create a module wide signal that indicates whether the toggle coverage is active
-          val en = ir.Reference(namespace.newName("enToggle"), Utils.BoolType, RegKind, UnknownFlow)
-          val ctx = ModuleCtx(annos, namespace, c.module(mod.name), en, Builder.findClock(mod))
-          val (coverStmts, portAliases) = coverSignals(signals, aliases, ctx, isTop(mod.name))
-          if(coverStmts.nonEmpty) {
-            // create actual hardware to generate enable signal
-            val (enStmt, enAnno) = buildCoverEnable(ctx, opt.resetAware)
-            val body = ir.Block(mod.body, enStmt, ir.Block(coverStmts))
-            (mod.copy(body = body), portAliases, Some(enAnno))
-          } else { (mod, portAliases, None) }
+          Builder.findClock(mod, logger) match {
+            case None => (mod, List(), None)
+            case Some(clock) =>
+              val namespace = Namespace(mod)
+              namespace.newName(Prefix)
+              // create a module wide signal that indicates whether the toggle coverage is active
+              val en = ir.Reference(namespace.newName("enToggle"), Utils.BoolType, RegKind, UnknownFlow)
+              val ctx = ModuleCtx(annos, namespace, c.module(mod.name), en, clock)
+              val (coverStmts, portAliases) = coverSignals(signals, aliases, ctx, isTop(mod.name))
+              if(coverStmts.nonEmpty) {
+                // create actual hardware to generate enable signal
+                val (enStmt, enAnno) = buildCoverEnable(ctx, opt.resetAware)
+                val body = ir.Block(mod.body, enStmt, ir.Block(coverStmts))
+                (mod.copy(body = body), portAliases, Some(enAnno))
+              } else { (mod, portAliases, None) }
+          }
         }
       case other => (other, List(), None)
     }

@@ -7,7 +7,7 @@ package coverage
 import chiseltest.coverage.CoverageInfo
 import coverage.midas.Builder
 import firrtl._
-import firrtl.annotations.{Annotation, CircuitTarget, ModuleTarget, ReferenceTarget, SingleTargetAnnotation}
+import firrtl.annotations.{Annotation, CircuitTarget, ModuleTarget, NoTargetAnnotation, ReferenceTarget, SingleTargetAnnotation}
 import firrtl.options.Dependency
 import firrtl.passes.{ExpandWhens, ExpandWhensAndCheck}
 import firrtl.stage.{Forms, RunFirrtlTransformAnnotation}
@@ -95,6 +95,8 @@ case class LineCoverageAnnotation(target: ReferenceTarget, lines: Coverage.Lines
   override def duplicate(n: ReferenceTarget) = copy(target = n)
 }
 
+case object SkipLineCoverageAnnotation extends NoTargetAnnotation
+
 object LineCoveragePass extends Transform with DependencyAPIMigration {
   val Prefix = "l"
 
@@ -107,6 +109,10 @@ object LineCoveragePass extends Transform with DependencyAPIMigration {
   override def invalidates(a: Transform): Boolean = false
 
   override protected def execute(state: CircuitState): CircuitState = {
+    if(state.annotations.contains(SkipLineCoverageAnnotation)) {
+      logger.info("[LineCoverage] skipping due to SkipLineCoverage annotation")
+      return state
+    }
     val newAnnos = mutable.ListBuffer[Annotation]()
     val c = CircuitTarget(state.circuit.main)
     val ignoreMods = Coverage.collectModulesToIgnore(state)

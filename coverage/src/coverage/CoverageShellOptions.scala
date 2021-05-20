@@ -60,8 +60,13 @@ final class CoverageShellOptions extends RegisteredLibrary {
       toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(CoverageInfoEmitter))),
       helpText = "write coverage information to a .cover.json file"
     ),
-    new ShellOption[String](
+    new ShellOption[Unit](
       longOption = "cover-scan-chain",
+      toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(CoverageScanChainPass))),
+      helpText = "schedules the cover scan chain pass to run, needs a CoverageScanChainOptions annotation for the pass to have any effect"
+    ),
+    new ShellOption[String](
+      longOption = "cover-scan-chain-width",
       toAnnotationSeq = a => Seq(RunFirrtlTransformAnnotation(Dependency(CoverageScanChainPass)),
                                  CoverageScanChainOptions(a.toInt, addBridge=true)),
       helpText = "replace all cover statements with hardware counters of <WIDTH> and a scan chain"

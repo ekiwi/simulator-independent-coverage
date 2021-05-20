@@ -55,13 +55,17 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
   }
 
   override protected def execute(state: CircuitState): CircuitState = {
-    // we first calculate an appropriate prefix for the scan chain IO
-    val prefixes = state.circuit.modules.flatMap(m => findPrefix(m).map(p => m.name -> p)).toMap
-
     // determine the counter width
     val opts = state.annotations.collect { case a: CoverageScanChainOptions => a }
+    if(opts.isEmpty) {
+      logger.info("[CoverageScanChainPass] no options annotation found, skipping...")
+      return state
+    }
     require(opts.size < 2, s"Multiple options: $opts")
-    val opt = opts.headOption.getOrElse(CoverageScanChainOptions())
+    val opt = opts.head
+
+    // we first calculate an appropriate prefix for the scan chain IO
+    val prefixes = state.circuit.modules.flatMap(m => findPrefix(m).map(p => m.name -> p)).toMap
 
     // now we can create the chains and hook them up
     val c = CircuitTarget(state.circuit.main)

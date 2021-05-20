@@ -5,6 +5,7 @@
 package coverage
 
 import chiseltest.coverage.CoverageInfo
+import coverage.FsmCoveragePass.logger
 import coverage.midas.Builder
 import coverage.passes.{AliasAnalysis, KeepClockAndResetPass}
 import firrtl.annotations.{Annotation, CircuitTarget, MakePresetRegAnnotation, ModuleTarget, NoTargetAnnotation, PresetRegAnnotation, ReferenceTarget, SingleTargetAnnotation}
@@ -57,6 +58,8 @@ object AllEmitters {
   )
 }
 
+case object SkipToggleCoverageAnnotation extends NoTargetAnnotation
+
 case class ToggleCoverageAnnotation(target: ReferenceTarget, signals: List[ReferenceTarget], bit: Int)
   extends SingleTargetAnnotation[ReferenceTarget]
     with CoverageInfo {
@@ -93,6 +96,11 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
   )
 
   override protected def execute(state: CircuitState): CircuitState = {
+    if(state.annotations.contains(SkipToggleCoverageAnnotation)) {
+      logger.info("[ToggleCoverage] skipping due to SkipToggleCoverage annotation")
+      return state
+    }
+
     // collect options and modules to ignore
     val opt = collectOptions(state.annotations)
     if(opt.noCoverage) {

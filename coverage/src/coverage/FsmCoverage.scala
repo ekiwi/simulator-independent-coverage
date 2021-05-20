@@ -63,6 +63,8 @@ case class FsmCoverageAnnotation(
   }
 }
 
+case object SkipFsmCoverageAnnotation extends NoTargetAnnotation
+
 object FsmCoveragePass extends Transform with DependencyAPIMigration {
   val Prefix = "f"
 
@@ -70,6 +72,11 @@ object FsmCoveragePass extends Transform with DependencyAPIMigration {
   override def invalidates(a: Transform): Boolean = false
 
   override def execute(state: CircuitState): CircuitState = {
+    if(state.annotations.contains(SkipFsmCoverageAnnotation)) {
+      logger.info("[FsmCoverage] skipping due to SkipFsmCoverage annotation")
+      return state
+    }
+
     // collect FSMs in modules that are not ignored
     val ignoreMods = Coverage.collectModulesToIgnore(state)
     val infos = state.annotations.collect{ case a: FsmInfoAnnotation if !ignoreMods(a.target.module) => a }

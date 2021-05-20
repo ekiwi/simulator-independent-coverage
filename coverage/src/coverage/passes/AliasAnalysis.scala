@@ -58,15 +58,23 @@ object AliasAnalysis {
     // if there are no port aliases in the children, nothing is going to change
     if(instancePortAliases.isEmpty) return local.groups
 
+    // we need to create a new group for signals that are not aliased when just looking at the local module,
+    // but are aliased through a connection in a submodule
+    val isAliasedPort = instancePortAliases.flatMap{ case (a,b) => List(a,b) }.toSet
+    val isGroupedSignal = local.groups.flatten.toSet
+    val singleSignalGroups = (isAliasedPort -- isGroupedSignal).toList.sorted.map(List(_))
+    val localGroups = local.groups ++ singleSignalGroups
+
     // build a map from (aliasing) instance port to group id
-    val instPortToGroupId = local.groups.zipWithIndex.flatMap { case (g, ii) =>
-      val ips = g.filter(instancePortAliases.contains)
+    val localGroupsWithIds = localGroups.zipWithIndex
+    val instPortToGroupId = localGroupsWithIds.flatMap { case (g, ii) =>
+      val ips = g.filter(isAliasedPort(_))
       ips.map(i => i -> ii)
     }.toMap
 
     // check to see if there are any groups that need to be merged
     val merges = findMerges(instancePortAliases, instPortToGroupId)
-    val updatedGroups = mergeGroups(local.groups, merges)
+    val updatedGroups = mergeGroups(localGroups, merges)
 
     updatedGroups
   }

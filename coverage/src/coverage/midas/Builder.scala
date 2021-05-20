@@ -7,6 +7,8 @@ package coverage.midas
 import firrtl._
 import firrtl.annotations.{IsModule, ReferenceTarget}
 
+import scala.collection.mutable
+
 /** Helps us construct well typed low-ish firrtl.
   * Some of these convenience functions could be moved to firrtl at some point.
   */
@@ -74,30 +76,32 @@ object Builder {
     case other          => throw new RuntimeException(s"Cannot change the width of $other!")
   }
 
-  def getWidth(tpe: ir.Type): BigInt = tpe match {
-    case ir.UIntType(ir.IntWidth(w)) => w
-    case ir.SIntType(ir.IntWidth(w)) => w
-    case ir.AsyncResetType           => 1
-    case ir.ClockType                => 1
-    case other                       => throw new RuntimeException(s"Cannot determine the width of $other!")
-  }
+  def getWidth(tpe: ir.Type): BigInt = firrtl.bitWidth(tpe)
 
   def makeRegister(
+    stmts: mutable.ListBuffer[ir.Statement],
     info:  ir.Info,
     name:  String,
     tpe:   ir.Type,
     clock: ir.Expression,
-    reset: ir.Expression,
-    init:  ir.Expression,
-    next:  ir.Expression
-  ): (ir.DefRegister, ir.Connect) = {
+    next:  ir.Expression,
+    reset: ir.Expression = Utils.False(),
+    init:  Option[ir.Expression] = None,
+  ): ir.Reference = {
     if (isAsyncReset(reset)) {
-      val reg = ir.DefRegister(info, name, tpe, clock, reset, init)
-      (reg, ir.Connect(info, ir.Reference(reg), next))
+      val initExpr = init.getOrElse(ir.Reference(name, tpe, RegKind))
+      val reg = ir.DefRegister(info, name, tpe, clock, reset, initExpr)
+      stmts.append(reg)
+      stmts.append(ir.Connect(info, ir.Reference(reg), next))
+      ir.Reference(reg)
     } else {
       val ref = ir.Reference(name, tpe, RegKind, UnknownFlow)
-      val reg = ir.DefRegister(info, name, tpe, clock, Utils.False(), ref)
-      (reg, ir.Connect(info, ref, Utils.mux(reset, init, next)))
+      stmts.append(ir.DefRegister(info, name, tpe, clock, Utils.False(), ref))
+      init match {
+        case Some(value) => stmts.append(ir.Connect(info, ref, Utils.mux(reset, value, next)))
+        case None => stmts.append(ir.Connect(info, ref, next))
+      }
+      ref
     }
   }
 

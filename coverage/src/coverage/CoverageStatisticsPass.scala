@@ -22,7 +22,7 @@ object CoverageStatisticsPass extends Transform with DependencyAPIMigration {
     state
   }
 
-  private val analysis = Seq(generalAnalysis(_), analyzeLineCoverage(_), analyzeToggleCoverage(_))
+  private val analysis = Seq(generalAnalysis(_), analyzeLineCoverage(_), analyzeToggleCoverage(_), analyzeFsmCoverage(_))
 
   private def generalAnalysis(state: CircuitState): Unit = {
     val coverPoints = state.annotations.collect{ case a: CoverageInfo => a }.size
@@ -56,6 +56,22 @@ object CoverageStatisticsPass extends Transform with DependencyAPIMigration {
         MemoryToggleCoverage -> "mems", WireToggleCoverage -> "wires")
       val on = opts.map{ case (a, s) => if(annos.contains(a)) s + " ✅" else s + " ❌" }.mkString(" ")
       logger.info("- " + on)
+    }
+  }
+
+  private def analyzeFsmCoverage(state: CircuitState): Unit = {
+    val annos = state.annotations
+    val states = annos.collect{ case a : FsmStateCoverAnnotation => a }
+    val transitions = annos.collect{ case a : FsmTransitionCoverAnnotation => a }
+    val fsms = annos.collect { case a: FsmInfoAnnotation => a }
+    if(fsms.nonEmpty && (states.nonEmpty || transitions.nonEmpty)) {
+      logger.info("FSM Coverage:")
+      logger.info(s"- FSMs detected: ${fsms.size}")
+      fsms.foreach { case FsmInfoAnnotation(target, states, transitions, start) =>
+        logger.info(s"  - ${target}: ${states.length} states, ${transitions.length} transitions")
+      }
+      logger.info(s"- States covered: ${states.size}")
+      logger.info(s"- Transitions covered: ${transitions.size}")
     }
   }
 }

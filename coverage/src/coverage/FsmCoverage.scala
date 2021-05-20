@@ -5,7 +5,10 @@
 package coverage
 
 import chisel3.experimental.EnumAnnotations.{EnumComponentAnnotation, EnumDefAnnotation}
-import firrtl.annotations.{Annotation, CircuitTarget, ComponentName, ModuleTarget, Named, ReferenceTarget, SingleTargetAnnotation}
+import chiseltest.coverage.CoverageInfo
+import coverage.midas.Builder
+import coverage.passes.{RegisterResetAnnotation, RegisterResetAnnotationPass}
+import firrtl.annotations.{Annotation, CircuitTarget, ComponentName, ModuleTarget, Named, NoTargetAnnotation, ReferenceTarget, SingleTargetAnnotation}
 import firrtl._
 import firrtl.options.Dependency
 import firrtl.stage.{Forms, RunFirrtlTransformAnnotation}
@@ -21,14 +24,20 @@ object FsmCoverage {
 }
 
 
-
+case class FsmStateCoverAnnotation(target: ReferenceTarget, register: ReferenceTarget, state: BigInt)
+  extends SingleTargetAnnotation[ReferenceTarget] with CoverageInfo {
+  override def duplicate(n: ReferenceTarget) = copy(target=n)
+}
+case class FsmTransitionCoverAnnotation(target: ReferenceTarget, register: ReferenceTarget, from: BigInt, to: BigInt)
+  extends SingleTargetAnnotation[ReferenceTarget] with CoverageInfo {
+  override def duplicate(n: ReferenceTarget) = copy(target=n)
+}
 
 object FsmCoveragePass extends Transform with DependencyAPIMigration {
   val Prefix = "f"
 
-  override def prerequisites: Seq[TransformDependency] = Forms.LowForm ++ Seq(Dependency(FsmInfoPass))
+  override def prerequisites: Seq[TransformDependency] = Forms.LowForm ++ Seq(Dependency(FsmInfoPass), Dependency(RegisterResetAnnotationPass))
   override def invalidates(a: Transform): Boolean = false
-
 
   override def execute(state: CircuitState): CircuitState = {
     // collect FSMs in modules that are not ignored
@@ -38,35 +47,94 @@ object FsmCoveragePass extends Transform with DependencyAPIMigration {
     // if there are no FSMs there is nothing to do
     if(infos.isEmpty) return state
 
-
-    val circuit = state.circuit.mapModule(onModule(_, infos))
-
-    state.copy(circuit = circuit)
+    // instrument FSMs
+    val registerResets = state.annotations.collect { case a: RegisterResetAnnotation => a }
+    val newAnnos = mutable.ListBuffer[Annotation]()
+    val c = CircuitTarget(state.circuit.main)
+    val circuit = state.circuit.mapModule(onModule(_, c, newAnnos, infos, registerResets))
+    state.copy(circuit = circuit, annotations = newAnnos.toList ++ state.annotations)
   }
 
-  private def onModule(m: ir.DefModule, infos: Seq[FsmInfoAnnotation]): ir.DefModule = m match {
+  private def onModule(m: ir.DefModule, c: CircuitTarget, annos: mutable.ListBuffer[Annotation],
+    infos: Seq[FsmInfoAnnotation], resets: Seq[RegisterResetAnnotation]): ir.DefModule = m match {
     case mod: ir.Module =>
       val fsms = infos.filter(_.target.module == mod.name)
       if(fsms.isEmpty) { mod } else {
+        val isFsm = fsms.map(_.target.ref).toSet
+        val fsmRegs = findFsmRegs(mod.body, isFsm)
+        val stmts = new mutable.ListBuffer[ir.Statement]()
+        val ctx = ModuleCtx(c.module(mod.name), stmts, Namespace(mod))
+        val toReset = RegisterResetAnnotationPass.findResetsInModule(ctx.m, resets)
+        val fsmAnnos = fsms.flatMap { f => onFsm(f, fsmRegs.find(_.name == f.target.ref).get, ctx, toReset.get) }
+        annos ++= fsmAnnos
+        val newBody = ir.Block(mod.body +: stmts.toList)
 
-        fsms.foreach(onFsm)
-       // TODO: instrument!
-
-        mod
+        mod.copy(body = newBody)
       }
     case other => other
   }
 
-  private def onFsm(fsm: FsmInfoAnnotation): Unit = {
-    println(s"[${fsm.target.module}.${fsm.target.name}] Found FSM")
-    if(fsm.start.nonEmpty) { println(s"Start: ${fsm.start}") }
-    println("Transitions:")
-    fsm.transitions.foreach(t => println(s"${t._1} -> ${t._2}"))
+  private case class ModuleCtx(m: ModuleTarget, stmts: mutable.ListBuffer[ir.Statement], namespace: Namespace)
 
+  private def onFsm(fsm: FsmInfoAnnotation, reg: ir.DefRegister, ctx: ModuleCtx, toReset: String => Option[String]): Seq[Annotation] = {
+    val info = reg.info
+    val clock = reg.clock
+    val reset = toReset(reg.name).map(ir.Reference(_, Utils.BoolType, NodeKind, SourceFlow)).getOrElse(Utils.False())
+    val notReset = Utils.not(reset)
+    val regRef = ir.Reference(reg)
+    val regTarget = ctx.m.ref(reg.name)
+    val regWidth = firrtl.bitWidth(reg.tpe)
+    def inState(s: BigInt): ir.Expression = Utils.eq(regRef, ir.UIntLiteral(s, ir.IntWidth(regWidth)))
+
+    // cover state when FSM is _not_ in reset
+    val stateAnnos = fsm.states.map { case (id, stateName) =>
+      val name = ctx.namespace.newName(reg.name + "_" + stateName)
+      ctx.stmts.append(ir.Verification(ir.Formal.Cover, info, clock, inState(id), notReset, ir.StringLit(""), name))
+      FsmStateCoverAnnotation(ctx.m.ref(name), regTarget, id)
+    }
+
+    // create a register to hold the previous state
+    val prevState = Builder.makeRegister(ctx.stmts, info, ctx.namespace.newName(reg.name + "_prev"), reg.tpe, clock, regRef)
+    def inPrevState(s: BigInt): ir.Expression = Utils.eq(prevState, ir.UIntLiteral(s, ir.IntWidth(regWidth)))
+
+    // create a register to track if the previous state is valid
+    val prevValid = Builder.makeRegister(ctx.stmts, info, ctx.namespace.newName(reg.name + "_prev_valid"), Utils.BoolType, clock, notReset)
+
+    // create a transition valid signal
+    val transitionValid = ir.Reference(ctx.namespace.newName(reg.name + "_t_valid"), Utils.BoolType, NodeKind)
+    ctx.stmts.append(ir.DefNode(info, transitionValid.name, Utils.and(notReset, prevValid)))
+
+    val toName = fsm.states.toMap
+    val tranAnnos = fsm.transitions.map { case (from, to) =>
+      val name = ctx.namespace.newName(reg.name + "_" + toName(from) + "_to_" + toName(to))
+      ctx.stmts.append(ir.Verification(ir.Formal.Cover, info, clock, Utils.and(inPrevState(from), inState(to)),
+        transitionValid, ir.StringLit(""), name))
+      FsmTransitionCoverAnnotation(ctx.m.ref(name), regTarget, from, to)
+    }
+
+    stateAnnos ++ tranAnnos
+  }
+
+  private def printFsmInfo(fsm: FsmInfoAnnotation): Unit = {
+    val toName = fsm.states.toMap
+    println(s"[${fsm.target.module}.${fsm.target.name}] Found FSM")
+    if (fsm.start.nonEmpty) {
+      println(s"Start: ${toName(fsm.start.get)}")
+    }
+    println("Transitions:")
+    fsm.transitions.foreach(t => println(s"${toName(t._1)} -> ${toName(t._2)}"))
+  }
+
+  private def findFsmRegs(s: ir.Statement, isFsm: String => Boolean): Seq[ir.DefRegister] = s match {
+    case r : ir.DefRegister if isFsm(r.name) => List(r)
+    case ir.Block(stmts) => stmts.flatMap(findFsmRegs(_, isFsm))
+    case _ : ir.Conditionally => throw new RuntimeException("Unexpected when statement! Expected LoFirrtl.")
+    case _ => List()
   }
 }
 
-case class FsmInfoAnnotation(target: ReferenceTarget, states: Seq[(String, BigInt)], transitions: Seq[(String, String)], start: String) extends SingleTargetAnnotation[ReferenceTarget] {
+case class FsmInfoAnnotation(target: ReferenceTarget, states: Seq[(BigInt, String)], transitions: Seq[(BigInt, BigInt)], start: Option[BigInt])
+  extends SingleTargetAnnotation[ReferenceTarget] {
   override def duplicate(n: ReferenceTarget) = copy(target=n)
 }
 
@@ -109,17 +177,17 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
   private def analyzeFSM(module: ModuleTarget, regDef: ir.DefRegister, nextExpr: ir.Expression, states: Map[String, BigInt]): FsmInfoAnnotation = {
     val (resetState, next) = destructReset(nextExpr)
     // println(s"Next: ${next.serialize}")
-    val intToState = states.toSeq.map{ case (k,v) => v -> k }.toMap
+    val allStates = states.values.toSet
     val transitions = destructMux(next).flatMap { case (guard, nx) =>
-      val from = guardStates(guard, regDef.name, intToState).getOrElse(states.keySet)
-      val to = nextStates(nx, regDef.name, intToState, from)
+      val from = guardStates(guard, regDef.name, allStates).getOrElse(allStates)
+      val to = nextStates(nx, regDef.name, allStates, from)
       from.flatMap(f => to.map(t => f -> t))
     }.sortBy(_._1)
 
     FsmInfoAnnotation(module.ref(regDef.name),
-      states = states.toSeq.sorted,
+      states = states.toSeq.sorted.map{ case (n, i) => i -> n },
       transitions = transitions,
-      start = resetState.map(intToState).getOrElse("")
+      start = resetState
     )
   }
 
@@ -138,32 +206,32 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
         fals.map{ case (guard, value) => (Utils.and(Utils.not(cond), guard), value) }
     case other => List((Utils.True(), other))
   }
-  private def nextStates(e: ir.Expression, name: String, states: Map[BigInt, String], guards: Set[String]): Set[String] = e match {
-    case c: ir.UIntLiteral => Set(states(c.value))
+  private def nextStates(e: ir.Expression, name: String, allStates: Set[BigInt], guards: Set[BigInt]): Set[BigInt] = e match {
+    case c: ir.UIntLiteral => Set(c.value)
     case r: ir.Reference if r.name == name => guards
-    case _ => states.values.toSet
+    case _ => allStates
   }
-  private def guardStates(e: ir.Expression, name: String, states: Map[BigInt, String]): Option[Set[String]] = e match {
+  private def guardStates(e: ir.Expression, name: String, allStates: Set[BigInt]): Option[Set[BigInt]] = e match {
     case ir.DoPrim(PrimOps.Eq, Seq(r: ir.Reference, c: ir.UIntLiteral), _, _) if r.name == name =>
-      Some(Set(states(c.value)))
+      Some(Set(c.value))
     case ir.DoPrim(PrimOps.Eq, Seq(c: ir.UIntLiteral, r: ir.Reference), _, _) if r.name == name =>
-      Some(Set(states(c.value)))
+      Some(Set(c.value))
     case ir.DoPrim(PrimOps.Neq, Seq(r: ir.Reference, c: ir.UIntLiteral), _, _) if r.name == name =>
-      Some(states.values.toSet -- Set(states(c.value)))
+      Some(allStates -- Set(c.value))
     case ir.DoPrim(PrimOps.Neq, Seq(c: ir.UIntLiteral, r: ir.Reference), _, _) if r.name == name =>
-      Some(states.values.toSet -- Set(states(c.value)))
+      Some(allStates -- Set(c.value))
     case ir.DoPrim(PrimOps.Or, Seq(a, b), _, _) =>
-      val aStates = guardStates(a, name, states)
-      val bStates = guardStates(b, name, states)
+      val aStates = guardStates(a, name, allStates)
+      val bStates = guardStates(b, name, allStates)
       combineOr(aStates, bStates)
     case ir.DoPrim(PrimOps.And, Seq(a, b), _, _) =>
-      val aStates = guardStates(a, name, states)
-      val bStates = guardStates(b, name, states)
+      val aStates = guardStates(a, name, allStates)
+      val bStates = guardStates(b, name, allStates)
       combineAnd(aStates, bStates)
     case ir.DoPrim(PrimOps.Not, Seq(a), _, _) =>
-      val aStates = guardStates(a, name, states)
+      val aStates = guardStates(a, name, allStates)
       aStates match {
-        case Some(s) => Some(states.values.toSet -- s)
+        case Some(s) => Some(allStates -- s)
         case None => None
       }
     // try to analyze the following pattern
@@ -174,7 +242,7 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
         assert(firrtl.bitWidth(b.tpe) == 1, s"Cannot deal with concatenated value ${b.serialize}")
       }
 
-      val sts = bits.map(guardStates(_, name, states))
+      val sts = bits.map(guardStates(_, name, allStates))
       if(sts.length == 1) {
         sts.head
       } else {
@@ -185,11 +253,11 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
       if(symbols.contains(name)) {
         // throw new RuntimeException(s"failed to analyze:\n" + other.serialize)
         // logger.warn("[FSM] over-approximating the states")
-        Some(states.values.toSet)
+        Some(allStates)
       } else { None } // no states
   }
 
-  private def combineOr(aStates: Option[Set[String]], bStates: Option[Set[String]]): Option[Set[String]] = {
+  private def combineOr(aStates: Option[Set[BigInt]], bStates: Option[Set[BigInt]]): Option[Set[BigInt]] = {
     (aStates, bStates) match {
       case (None, None) => None
       case (None, a) => a
@@ -198,7 +266,7 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
     }
   }
 
-  private def combineAnd(aStates: Option[Set[String]], bStates: Option[Set[String]]): Option[Set[String]] = {
+  private def combineAnd(aStates: Option[Set[BigInt]], bStates: Option[Set[BigInt]]): Option[Set[BigInt]] = {
     (aStates, bStates) match {
       case (None, None) => None
       case (None, a) => a

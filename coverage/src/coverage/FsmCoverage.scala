@@ -8,7 +8,7 @@ import chisel3.experimental.EnumAnnotations.{EnumComponentAnnotation, EnumDefAnn
 import chiseltest.coverage.CoverageInfo
 import coverage.midas.Builder
 import coverage.passes.{RegisterResetAnnotation, RegisterResetAnnotationPass}
-import firrtl.annotations.{Annotation, CircuitTarget, ComponentName, ModuleTarget, Named, NoTargetAnnotation, ReferenceTarget, SingleTargetAnnotation}
+import firrtl.annotations.{Annotation, CircuitTarget, ComponentName, ModuleTarget, MultiTargetAnnotation, Named, NoTargetAnnotation, ReferenceTarget, SingleTargetAnnotation, Target}
 import firrtl._
 import firrtl.options.Dependency
 import firrtl.stage.{Forms, RunFirrtlTransformAnnotation}
@@ -21,16 +21,46 @@ object FsmCoverage {
     RunFirrtlTransformAnnotation(Dependency(FsmCoveragePass)),
     RunFirrtlTransformAnnotation(Dependency(ModuleInstancesPass))
   )
+
+  def processCoverage(annos: AnnotationSeq): Seq[FsmCoverageData] = {
+    val fsms = annos.collect{ case a : FsmCoverageAnnotation => a }
+    val cov = Coverage.collectTestCoverage(annos).toMap
+    val moduleToInst = Coverage.moduleToInstances(annos)
+
+    fsms.flatMap { fsm =>
+      val top = fsm.stateReg.circuit + "."
+      moduleToInst(fsm.stateReg.module).map { inst =>
+        val states = fsm.states
+          .map(s => s._1 -> cov(Coverage.path(inst, s._2.ref)))
+          .toList.sortBy(_._1)
+        val transitions = fsm.transitions
+          .map(t => t._1 -> cov(Coverage.path(inst, t._2.ref)))
+          .toList.sortBy(_._1)
+        FsmCoverageData(top + Coverage.path(inst, fsm.stateReg.ref), states, transitions)
+      }
+    }
+  }
 }
 
+case class FsmCoverageData(name: String, states: List[(String, Long)], transitions: List[((String, String), Long)])
 
-case class FsmStateCoverAnnotation(target: ReferenceTarget, register: ReferenceTarget, state: BigInt)
-  extends SingleTargetAnnotation[ReferenceTarget] with CoverageInfo {
-  override def duplicate(n: ReferenceTarget) = copy(target=n)
-}
-case class FsmTransitionCoverAnnotation(target: ReferenceTarget, register: ReferenceTarget, from: BigInt, to: BigInt)
-  extends SingleTargetAnnotation[ReferenceTarget] with CoverageInfo {
-  override def duplicate(n: ReferenceTarget) = copy(target=n)
+
+case class FsmCoverageAnnotation(
+  stateReg: ReferenceTarget,
+  states: Seq[(String, ReferenceTarget)],
+  transitions: Seq[((String, String), ReferenceTarget)]) extends MultiTargetAnnotation with CoverageInfo {
+  override def targets = Seq(Seq(stateReg)) ++ states.map(s => Seq(s._2)) ++ transitions.map(t => Seq(t._2))
+
+  override def duplicate(n: Seq[Seq[Target]]) = {
+    assert(n.length == 1 + states.length + transitions.length)
+    n.foreach(e => assert(e.length == 1, "Cover points and state registers should not be split up!"))
+    val targets = n.map(_.head.asInstanceOf[ReferenceTarget])
+    val r = copy(stateReg = targets.head,
+      states = states.map(_._1).zip(targets.slice(1, states.length + 1)),
+      transitions = transitions.map(_._1).zip(targets.drop(1 + states.length)),
+    )
+    r
+  }
 }
 
 object FsmCoveragePass extends Transform with DependencyAPIMigration {
@@ -65,7 +95,7 @@ object FsmCoveragePass extends Transform with DependencyAPIMigration {
         val stmts = new mutable.ListBuffer[ir.Statement]()
         val ctx = ModuleCtx(c.module(mod.name), stmts, Namespace(mod))
         val toReset = RegisterResetAnnotationPass.findResetsInModule(ctx.m, resets)
-        val fsmAnnos = fsms.flatMap { f => onFsm(f, fsmRegs.find(_.name == f.target.ref).get, ctx, toReset.get) }
+        val fsmAnnos = fsms.map { f => onFsm(f, fsmRegs.find(_.name == f.target.ref).get, ctx, toReset.get) }
         annos ++= fsmAnnos
         val newBody = ir.Block(mod.body +: stmts.toList)
 
@@ -76,21 +106,20 @@ object FsmCoveragePass extends Transform with DependencyAPIMigration {
 
   private case class ModuleCtx(m: ModuleTarget, stmts: mutable.ListBuffer[ir.Statement], namespace: Namespace)
 
-  private def onFsm(fsm: FsmInfoAnnotation, reg: ir.DefRegister, ctx: ModuleCtx, toReset: String => Option[String]): Seq[Annotation] = {
+  private def onFsm(fsm: FsmInfoAnnotation, reg: ir.DefRegister, ctx: ModuleCtx, toReset: String => Option[String]): Annotation = {
     val info = reg.info
     val clock = reg.clock
     val reset = toReset(reg.name).map(ir.Reference(_, Utils.BoolType, NodeKind, SourceFlow)).getOrElse(Utils.False())
     val notReset = Utils.not(reset)
     val regRef = ir.Reference(reg)
-    val regTarget = ctx.m.ref(reg.name)
     val regWidth = firrtl.bitWidth(reg.tpe)
     def inState(s: BigInt): ir.Expression = Utils.eq(regRef, ir.UIntLiteral(s, ir.IntWidth(regWidth)))
 
     // cover state when FSM is _not_ in reset
-    val stateAnnos = fsm.states.map { case (id, stateName) =>
+    val states = fsm.states.map { case (id, stateName) =>
       val name = ctx.namespace.newName(reg.name + "_" + stateName)
       ctx.stmts.append(ir.Verification(ir.Formal.Cover, info, clock, inState(id), notReset, ir.StringLit(""), name))
-      FsmStateCoverAnnotation(ctx.m.ref(name), regTarget, id)
+      stateName -> ctx.m.ref(name)
     }
 
     // create a register to hold the previous state
@@ -104,15 +133,16 @@ object FsmCoveragePass extends Transform with DependencyAPIMigration {
     val transitionValid = ir.Reference(ctx.namespace.newName(reg.name + "_t_valid"), Utils.BoolType, NodeKind)
     ctx.stmts.append(ir.DefNode(info, transitionValid.name, Utils.and(notReset, prevValid)))
 
-    val toName = fsm.states.toMap
-    val tranAnnos = fsm.transitions.map { case (from, to) =>
-      val name = ctx.namespace.newName(reg.name + "_" + toName(from) + "_to_" + toName(to))
+    val idToName = fsm.states.toMap
+    val transitions = fsm.transitions.map { case (from, to) =>
+      val (fromName, toName) = (idToName(from), idToName(to))
+      val name = ctx.namespace.newName(reg.name + "_" + fromName + "_to_" + toName)
       ctx.stmts.append(ir.Verification(ir.Formal.Cover, info, clock, Utils.and(inPrevState(from), inState(to)),
         transitionValid, ir.StringLit(""), name))
-      FsmTransitionCoverAnnotation(ctx.m.ref(name), regTarget, from, to)
+      (fromName, toName) -> ctx.m.ref(name)
     }
 
-    stateAnnos ++ tranAnnos
+    FsmCoverageAnnotation(ctx.m.ref(reg.name), states, transitions)
   }
 
   private def printFsmInfo(fsm: FsmInfoAnnotation): Unit = {

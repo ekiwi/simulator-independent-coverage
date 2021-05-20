@@ -61,17 +61,12 @@ object CoverageStatisticsPass extends Transform with DependencyAPIMigration {
 
   private def analyzeFsmCoverage(state: CircuitState): Unit = {
     val annos = state.annotations
-    val states = annos.collect{ case a : FsmStateCoverAnnotation => a }
-    val transitions = annos.collect{ case a : FsmTransitionCoverAnnotation => a }
-    val fsms = annos.collect { case a: FsmInfoAnnotation => a }
-    if(fsms.nonEmpty && (states.nonEmpty || transitions.nonEmpty)) {
+    val fsms = annos.collect { case a: FsmCoverageAnnotation => a }
+    if(fsms.nonEmpty) {
       logger.info("FSM Coverage:")
-      logger.info(s"- FSMs detected: ${fsms.size}")
-      fsms.foreach { case FsmInfoAnnotation(target, states, transitions, start) =>
-        logger.info(s"  - ${target}: ${states.length} states, ${transitions.length} transitions")
+      fsms.foreach { case FsmCoverageAnnotation(stateReg, states, transitions) =>
+        logger.info(s"- ${stateReg}: ${states.length} states, ${transitions.length} transitions")
       }
-      logger.info(s"- States covered: ${states.size}")
-      logger.info(s"- Transitions covered: ${transitions.size}")
     }
   }
 }

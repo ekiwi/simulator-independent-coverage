@@ -24,7 +24,7 @@ object LineCoverage {
 
   def processCoverage(annos: AnnotationSeq): LineCoverageData = {
     val cov = Coverage.collectTestCoverage(annos).toMap
-    val moduleToInst = Coverage.collectModuleInstances(annos).groupBy(_._2).map{ case (k,v) => k -> v.map(_._1) }
+    val moduleToInst = Coverage.moduleToInstances(annos)
     val infos = annos.collect { case a: LineCoverageAnnotation => a }
 
     val counts = infos.flatMap { case LineCoverageAnnotation(target, lines) =>

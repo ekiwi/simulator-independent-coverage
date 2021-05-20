@@ -45,7 +45,7 @@ class SingleClockFsmCoverageTest extends LeanTransformSpec(Seq(Dependency(FsmCov
   }
 
   it should "instrument a single clock RiscV Mini design" in {
-    val ll = LogLevel.Info
+    val ll = LogLevel.Warn
     val state = Logger.makeScope(Seq(LogLevelAnnotation(ll))) {
       compile(ClockAnalysisExamples.riscvMini, ClockAnalysisExamples.riscvMiniAnnos)
     }

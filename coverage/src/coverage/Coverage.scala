@@ -47,6 +47,10 @@ object Coverage {
     }
   }
 
+  def moduleToInstances(annos: AnnotationSeq): Map[String, List[String]] = {
+    collectModuleInstances(annos).groupBy(_._2).map{ case (k,v) => k -> v.map(_._1) }
+  }
+
   def collectModulesToIgnore(state: CircuitState): Set[String] = {
     val main = state.circuit.main
     state.annotations.collect { case DoNotCoverAnnotation(target) if target.circuit == main => target.module }.toSet

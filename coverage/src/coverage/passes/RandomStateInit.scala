@@ -6,7 +6,7 @@ package coverage.passes
 
 
 import firrtl._
-import firrtl.annotations.{Annotation, CircuitTarget, MakePresetRegAnnotation, ModuleTarget}
+import firrtl.annotations._
 import firrtl.options.Dependency
 import firrtl.transforms._
 
@@ -21,25 +21,38 @@ import scala.util.Random
  * */
 object RandomStateInit extends Transform with DependencyAPIMigration {
   // run on lowered firrtl
-  override def prerequisites = Seq(Dependency(passes.ExpandWhens), Dependency(passes.LowerTypes), Dependency(transforms.RemoveReset))
+  override def prerequisites = Seq(
+    Dependency(firrtl.passes.ExpandWhens), Dependency(firrtl.passes.LowerTypes),
+    Dependency(firrtl.transforms.RemoveReset))
   override def invalidates(a: Transform) = false
   // since we generate PresetRegAnnotations, we need to run after preset propagation
   override def optionalPrerequisites = Seq(Dependency[PropagatePresetAnnotations])
 
   override def execute(state: CircuitState): CircuitState = {
     val c = CircuitTarget(state.circuit.main)
-    val modsAndAnnos = state.circuit.modules.map(onModule(_, c))
-    val annos = modsAndAnnos.flatMap(_._2) ++ state.annotations
+    val initd = findInitializedMems(state.annotations)
+    val modsAndAnnos = state.circuit.modules.map(onModule(_, c, initd))
+    val annos = MemorySynthInit +: modsAndAnnos.flatMap(_._2) ++: state.annotations
     val circuit = state.circuit.copy(modules = modsAndAnnos.map(_._1))
     state.copy(circuit = circuit, annotations = annos)
   }
 
-  private def onModule(m: ir.DefModule, c: CircuitTarget): (ir.DefModule, Seq[Annotation]) = m match {
+  private def findInitializedMems(annos: AnnotationSeq): Seq[ReferenceTarget] = {
+    annos.collect {
+      case MemoryScalarInitAnnotation(target, _) => target
+      case MemoryArrayInitAnnotation(target, _) => target
+      case MemoryFileInlineAnnotation(target, _, _) => target
+      case LoadMemoryAnnotation(target, _, _, _) => target
+    }
+  }
+
+  private def onModule(m: ir.DefModule, c: CircuitTarget, initialized: Seq[ReferenceTarget]): (ir.DefModule, Seq[Annotation]) = m match {
     case mod: ir.Module =>
+      val isInitd = initialized.filter(_.module == mod.name).map(_.ref).toSet
       val rand = new Random(mod.name.hashCode)
       val annos = mutable.ListBuffer[Annotation]()
       val m = c.module(mod.name)
-      val newMod = mod.mapStmt(onStmt(_, annos, m, rand))
+      val newMod = mod.mapStmt(onStmt(_, annos, m, rand, isInitd))
       (newMod, annos.toList)
     case other => (other, List())
   }
@@ -52,7 +65,7 @@ object RandomStateInit extends Transform with DependencyAPIMigration {
     } else { unsigned }
   }
 
-  private def onStmt(s: ir.Statement, annos: mutable.ListBuffer[Annotation], m: ModuleTarget, rand: Random): ir.Statement = s match {
+  private def onStmt(s: ir.Statement, annos: mutable.ListBuffer[Annotation], m: ModuleTarget, rand: Random, isInitd: String => Boolean): ir.Statement = s match {
     case r: ir.DefRegister =>
       if(r.reset == Utils.False()) {
         val bits = firrtl.bitWidth(r.tpe).toInt
@@ -69,9 +82,10 @@ object RandomStateInit extends Transform with DependencyAPIMigration {
         logger.warn(s"[${m.module}] Cannot initialize register ${r.name} with reset: ${r.reset.serialize}")
         r
       }
-    case mem: ir.DefMemory =>
-      logger.warn(s"[${m.module}] TODO: add support for memory initialization of ${mem.name}")
+    case mem: ir.DefMemory if !isInitd(mem.name) =>
+      val value = BigInt(firrtl.bitWidth(mem.dataType).toInt, rand)
+      annos.append(MemoryScalarInitAnnotation(m.ref(mem.name), value))
       mem
-    case other => other.mapStmt(onStmt(_, annos, m, rand))
+    case other => other.mapStmt(onStmt(_, annos, m, rand, isInitd))
   }
 }

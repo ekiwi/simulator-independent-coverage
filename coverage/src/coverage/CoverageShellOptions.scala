@@ -5,7 +5,7 @@
 package coverage
 
 import coverage.midas.{CoverageScanChainOptions, CoverageScanChainPass, RemoveBlackboxAnnotations, RemoveStatementNames}
-import coverage.passes.RandomStateInit
+import coverage.passes.{ChangeMainPass, MakeMainAnnotation, RandomStateInit}
 import firrtl.annotations.{CircuitTarget, ModuleTarget}
 import firrtl.options._
 import firrtl.stage.RunFirrtlTransformAnnotation
@@ -85,6 +85,17 @@ final class CoverageShellOptions extends RegisteredLibrary {
       longOption = "random-state-init",
       toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(RandomStateInit))),
       helpText = "initializes registers and memories with random (at compile time) values"
+    ),
+    new ShellOption[Unit](
+      longOption = "formal-cover",
+      toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(RandomStateInit))),
+      helpText = "prepares the circuit for formal cover trace generation"
+    ),
+    new ShellOption[String](
+      longOption = "make-main",
+      toAnnotationSeq = a => Seq(MakeMainAnnotation(parseModuleTarget(a)), RunFirrtlTransformAnnotation(Dependency(ChangeMainPass))),
+      helpText = "selects a module to be the main module of the circuit",
+      helpValueName = Some("<circuit:module>")
     ),
   )
 

@@ -69,8 +69,13 @@ case class ToggleCoverageAnnotation(target: ReferenceTarget, signals: List[Refer
 object ToggleCoveragePass extends Transform with DependencyAPIMigration {
   val Prefix = "t"
 
-  // we want to run after optimization in order to minimize the number of signals that are left over to instrument
-  override def prerequisites: Seq[TransformDependency] = Forms.LowFormOptimized ++ Seq(Dependency(KeepClockAndResetPass))
+
+  override def prerequisites: Seq[TransformDependency] = Seq(
+    // we want to run after optimization in order to minimize the number of signals that are left over to instrument
+    Dependency[firrtl.transforms.ConstantPropagation],
+    Dependency(passes.CommonSubexpressionElimination),
+    Dependency[firrtl.transforms.DeadCodeElimination],
+    Dependency(KeepClockAndResetPass))
   override def optionalPrerequisites = Seq(
     // we add our own registers with presets
     Dependency[PropagatePresetAnnotations],

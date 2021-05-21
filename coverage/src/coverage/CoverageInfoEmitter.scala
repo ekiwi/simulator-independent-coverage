@@ -28,6 +28,15 @@ object CoverageInfoEmitter extends Transform with DependencyAPIMigration {
       case _: ModuleInstancesAnnotation => true
       case _: CoverageScanChainInfo => true
       case _: CoverageScanChainOptions => true
+      case SkipLineCoverageAnnotation => true
+      case SkipToggleCoverageAnnotation => true
+      case SkipFsmCoverageAnnotation => true
+      case _: FsmInfoAnnotation => true
+      case _: DoNotCoverAnnotation => true
+      case WireToggleCoverage => true
+      case MemoryToggleCoverage => true
+      case RegisterToggleCoverage => true
+      case PortToggleCoverage => true
       case _ => false
     }
 

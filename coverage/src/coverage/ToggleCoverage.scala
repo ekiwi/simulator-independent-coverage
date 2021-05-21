@@ -20,7 +20,8 @@ import scala.collection.mutable
 
 object ToggleCoverage {
   def passes: Seq[TransformDependency] = Seq(Dependency(ToggleCoveragePass), Dependency(ModuleInstancesPass))
-  def all: AnnotationSeq = Seq(PortToggleCoverage, RegisterToggleCoverage, MemoryToggleCoverage, WireToggleCoverage) ++ passAnnos
+  // TODO: re-enable MemoryToggleCoverage (currently broken b/c we are not allowed to read input ports!)
+  def all: AnnotationSeq = Seq(PortToggleCoverage, RegisterToggleCoverage, WireToggleCoverage) ++ passAnnos
   def ports: AnnotationSeq = Seq(PortToggleCoverage) ++ passAnnos
   def registers: AnnotationSeq = Seq(RegisterToggleCoverage) ++ passAnnos
   def memories: AnnotationSeq = Seq(MemoryToggleCoverage) ++ passAnnos

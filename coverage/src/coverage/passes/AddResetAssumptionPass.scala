@@ -5,6 +5,7 @@
 package coverage.passes
 
 
+import coverage.AllEmitters
 import coverage.midas.Builder
 import firrtl._
 import firrtl.annotations._
@@ -22,6 +23,8 @@ object AddResetAssumptionPass extends Transform with DependencyAPIMigration {
   override def invalidates(a: Transform) = false
   // since we generate PresetRegAnnotations, we need to run after preset propagation
   override def optionalPrerequisites = Seq(Dependency[PropagatePresetAnnotations])
+  // we want to run before the actual Verilog is emitted
+  override def optionalPrerequisiteOf = AllEmitters()
 
   override def execute(state: CircuitState): CircuitState = {
     val annos = mutable.ListBuffer[Annotation]()

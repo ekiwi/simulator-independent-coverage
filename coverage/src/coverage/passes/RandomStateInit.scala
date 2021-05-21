@@ -32,7 +32,8 @@ object RandomStateInit extends Transform with DependencyAPIMigration {
     val c = CircuitTarget(state.circuit.main)
     val initd = findInitializedMems(state.annotations)
     val modsAndAnnos = state.circuit.modules.map(onModule(_, c, initd))
-    val annos = MemorySynthInit +: modsAndAnnos.flatMap(_._2) ++: state.annotations
+    // TODO MemorySynthInit annotation does not work with MemoryScalarInitAnnotation :(
+    val annos = modsAndAnnos.flatMap(_._2) ++: state.annotations
     val circuit = state.circuit.copy(modules = modsAndAnnos.map(_._1))
     state.copy(circuit = circuit, annotations = annos)
   }

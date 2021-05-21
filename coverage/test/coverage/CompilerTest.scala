@@ -2,7 +2,7 @@
 
 package coverage
 
-import chisel3.Module
+import chisel3.{Module, RawModule}
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chiseltest.ChiselScalatestTester
 import chiseltest.experimental.sanitizeFileName
@@ -16,7 +16,7 @@ import java.io.File
 trait CompilerTest extends ChiselScalatestTester { this: TestSuite =>
   protected def annos: AnnotationSeq = Seq()
 
-  protected def compile[M <: Module](gen: => M, target: String, a: AnnotationSeq = List(), ll: String = "warn"): (String, AnnotationSeq) = {
+  protected def compile[M <: RawModule](gen: => M, target: String, a: AnnotationSeq = List(), ll: String = "warn"): (String, AnnotationSeq) = {
     val stage = new ChiselStage
 
     // ensure that test files don't just end up in the root directory

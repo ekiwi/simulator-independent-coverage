@@ -5,7 +5,7 @@
 package coverage
 
 import coverage.midas.{CoverageScanChainOptions, CoverageScanChainPass, RemoveBlackboxAnnotations, RemoveStatementNames}
-import coverage.passes.{ChangeMainPass, MakeMainAnnotation, RandomStateInit}
+import coverage.passes.{AddResetAssumptionPass, ChangeMainPass, MakeMainAnnotation, RandomStateInit}
 import firrtl.annotations.{CircuitTarget, ModuleTarget}
 import firrtl.options._
 import firrtl.stage.RunFirrtlTransformAnnotation
@@ -88,7 +88,8 @@ final class CoverageShellOptions extends RegisteredLibrary {
     ),
     new ShellOption[Unit](
       longOption = "formal-cover",
-      toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(RandomStateInit))),
+      toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(RandomStateInit)),
+        RunFirrtlTransformAnnotation(Dependency(AddResetAssumptionPass))),
       helpText = "prepares the circuit for formal cover trace generation"
     ),
     new ShellOption[String](
@@ -96,6 +97,11 @@ final class CoverageShellOptions extends RegisteredLibrary {
       toAnnotationSeq = a => Seq(MakeMainAnnotation(parseModuleTarget(a)), RunFirrtlTransformAnnotation(Dependency(ChangeMainPass))),
       helpText = "selects a module to be the main module of the circuit",
       helpValueName = Some("<circuit:module>")
+    ),
+    new ShellOption[Unit](
+      longOption = "add-reset-assumption",
+      toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(AddResetAssumptionPass))),
+      helpText = "adds an assumption to the toplevel module that all resets are active in the first cycle"
     ),
   )
 

@@ -32,9 +32,10 @@ object KeepClockAndResetPass extends Transform with DependencyAPIMigration {
   private def onModule(m: ir.DefModule, c: CircuitTarget): List[DontTouchAnnotation] = m match {
     case mod: ir.Module =>
       val clock = Builder.findClocks(mod)
-      val reset = Builder.findResets(mod)
+      // TODO: re-enable this for resets!
+      //val reset = Builder.findResets(mod)
       val mRef = c.module(mod.name)
-      (clock ++ reset).map(e => DontTouchAnnotation(Builder.refToTarget(mRef, e))).toList
+      (clock).map(e => DontTouchAnnotation(Builder.refToTarget(mRef, e))).toList
     case _ => List()
   }
 }

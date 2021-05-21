@@ -71,8 +71,12 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
 
   // we want to run after optimization in order to minimize the number of signals that are left over to instrument
   override def prerequisites: Seq[TransformDependency] = Forms.LowFormOptimized ++ Seq(Dependency(KeepClockAndResetPass))
-  // we add our own registers with presets
-  override def optionalPrerequisites = Seq(Dependency[PropagatePresetAnnotations])
+  override def optionalPrerequisites = Seq(
+    // we add our own registers with presets
+    Dependency[PropagatePresetAnnotations],
+    // this is to work around a bug where the WiringTransform gets scheduled too late
+    Dependency[firrtl.passes.wiring.WiringTransform],
+  )
   // we want to run before the actual Verilog is emitted
   override def optionalPrerequisiteOf = AllEmitters()
   override def invalidates(a: Transform): Boolean = false

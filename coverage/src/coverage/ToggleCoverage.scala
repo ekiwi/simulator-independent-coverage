@@ -7,7 +7,7 @@ package coverage
 import chiseltest.coverage.CoverageInfo
 import coverage.FsmCoveragePass.logger
 import coverage.midas.Builder
-import coverage.passes.{AliasAnalysis, KeepClockAndResetPass}
+import coverage.passes.{AliasAnalysis, KeepClockAndResetPass, RemoveKeepClockAndResetAnnotations}
 import firrtl.annotations.{Annotation, CircuitTarget, MakePresetRegAnnotation, ModuleTarget, NoTargetAnnotation, PresetRegAnnotation, ReferenceTarget, SingleTargetAnnotation}
 import firrtl._
 import firrtl.analyses.InstanceKeyGraph
@@ -19,7 +19,8 @@ import firrtl.transforms.PropagatePresetAnnotations
 import scala.collection.mutable
 
 object ToggleCoverage {
-  def passes: Seq[TransformDependency] = Seq(Dependency(ToggleCoveragePass), Dependency(ModuleInstancesPass))
+  def passes: Seq[TransformDependency] = Seq(Dependency(ToggleCoveragePass), Dependency(ModuleInstancesPass),
+    Dependency(RemoveKeepClockAndResetAnnotations))
   // TODO: re-enable MemoryToggleCoverage (currently broken b/c we are not allowed to read input ports!)
   def all: AnnotationSeq = Seq(PortToggleCoverage, RegisterToggleCoverage, WireToggleCoverage) ++ passAnnos
   def ports: AnnotationSeq = Seq(PortToggleCoverage) ++ passAnnos

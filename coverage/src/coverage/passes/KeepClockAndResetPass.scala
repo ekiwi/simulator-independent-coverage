@@ -6,10 +6,16 @@ package coverage.passes
 
 import coverage.midas.Builder
 import firrtl._
-import firrtl.annotations.CircuitTarget
+import firrtl.annotations._
 import firrtl.options.Dependency
 import firrtl.stage.Forms
 import firrtl.transforms._
+
+case class KeepClockAndResetAnnotation(target: ReferenceTarget) extends
+  SingleTargetAnnotation[ReferenceTarget] with HasDontTouches {
+  override def duplicate(n: ReferenceTarget) = copy(target=n)
+  override def dontTouches = List(target)
+}
 
 /** Marks all `clock` and `reset` signals as DontTouch so that they are not removed by
  *  Dead Code Elimination. This makes adding coverage that relies on those pins being
@@ -29,13 +35,21 @@ object KeepClockAndResetPass extends Transform with DependencyAPIMigration {
     state.copy(annotations = annos ++ state.annotations)
   }
 
-  private def onModule(m: ir.DefModule, c: CircuitTarget): List[DontTouchAnnotation] = m match {
+  private def onModule(m: ir.DefModule, c: CircuitTarget): List[KeepClockAndResetAnnotation] = m match {
     case mod: ir.Module =>
       val clock = Builder.findClocks(mod)
-      // TODO: re-enable this for resets!
-      //val reset = Builder.findResets(mod)
+      val reset = Builder.findResets(mod)
       val mRef = c.module(mod.name)
-      (clock).map(e => DontTouchAnnotation(Builder.refToTarget(mRef, e))).toList
+      (clock).map(e => KeepClockAndResetAnnotation(Builder.refToTarget(mRef, e))).toList
     case _ => List()
+  }
+}
+
+object RemoveKeepClockAndResetAnnotations extends Transform with DependencyAPIMigration {
+  override def prerequisites = Seq(Dependency(KeepClockAndResetPass))
+  override def invalidates(a: Transform) = a == KeepClockAndResetPass
+  override def execute(state: CircuitState): CircuitState = {
+    val filtered = state.annotations.filterNot(_.isInstanceOf[KeepClockAndResetAnnotation])
+    state.copy(annotations = filtered)
   }
 }

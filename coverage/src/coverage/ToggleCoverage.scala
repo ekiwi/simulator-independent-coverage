@@ -74,7 +74,7 @@ object ToggleCoveragePass extends Transform with DependencyAPIMigration {
   override def prerequisites: Seq[TransformDependency] = Seq(
     // we want to run after optimization in order to minimize the number of signals that are left over to instrument
     Dependency[firrtl.transforms.ConstantPropagation],
-    Dependency(passes.CommonSubexpressionElimination),
+    Dependency(firrtl.passes.CommonSubexpressionElimination),
     Dependency[firrtl.transforms.DeadCodeElimination],
     Dependency(KeepClockAndResetPass))
   override def optionalPrerequisites = Seq(

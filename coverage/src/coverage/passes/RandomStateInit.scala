@@ -43,7 +43,7 @@ object RandomStateInit extends Transform with DependencyAPIMigration {
       case MemoryScalarInitAnnotation(target, _) => target
       case MemoryArrayInitAnnotation(target, _) => target
       case MemoryFileInlineAnnotation(target, _, _) => target
-      case LoadMemoryAnnotation(target, _, _, _) => target
+      case LoadMemoryAnnotation(target, _, _, _) => target.toTarget
     }
   }
 

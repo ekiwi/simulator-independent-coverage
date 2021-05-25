@@ -7,13 +7,15 @@ package coverage.passes
 import firrtl._
 import firrtl.annotations._
 import firrtl.options.Dependency
-import firrtl.transforms.RemoveReset
+import firrtl.transforms.{HasDontTouches, RemoveReset}
 
 import scala.collection.mutable
 
 
-case class RegisterResetAnnotation(registers: Seq[ReferenceTarget], reset: ReferenceTarget) extends MultiTargetAnnotation {
+case class RegisterResetAnnotation(registers: Seq[ReferenceTarget], reset: ReferenceTarget) extends MultiTargetAnnotation
+with HasDontTouches {
   override def targets = Seq(registers, Seq(reset))
+  override def dontTouches = List(reset)
 
   override def duplicate(n: Seq[Seq[Target]]) = n match {
     case Seq(t: Seq[ReferenceTarget], Seq(r: ReferenceTarget)) => copy(registers=t, reset=r)

@@ -3,7 +3,7 @@
 // author: Kevin Laeufer <laeufer@cs.berkeley.edu>
 package coverage
 
-import chiseltest.coverage.ModuleInstancesAnnotation
+import chiseltest.coverage.{ModuleInstancesAnnotation, TestCoverage}
 import firrtl._
 import firrtl.annotations._
 import firrtl.options.Dependency
@@ -76,5 +76,40 @@ object RemoveCoverPointsPass extends Transform with DependencyAPIMigration {
       val remove = moduleCoverCounts(m).toList.filter(_._2 < instanceCount).map(_._1)
       m -> remove
     }.toMap
+  }
+}
+
+
+case class LoadCoverageAnnotation(filename: String) extends NoTargetAnnotation
+
+/** reads in one or several JSON files containing one or several [[TestCoverage]] annotations
+ *  and generates a [[RemoveCoverAnnotation]] for all cover points that were covered at least once.
+ *  */
+object FindCoversToRemovePass extends Transform with DependencyAPIMigration {
+  override def prerequisites = Seq()
+  override def invalidates(a: Transform) = false
+  override def optionalPrerequisiteOf = Seq(Dependency(RemoveCoverPointsPass))
+
+  val Threshold: Long = 1 // at least covered once
+
+  override def execute(state: CircuitState): CircuitState = {
+    val annos = state.annotations.collect { case a: TestCoverage => a }
+    if(annos.isEmpty) return state
+
+    val covers = merge(annos)
+    val coveredEnough = covers.filter(_._2 >= Threshold)
+    if(coveredEnough.isEmpty) return state
+
+    val remove = RemoveCoverAnnotation(coveredEnough.map(_._1))
+    logger.info(s"[FindCoversToRemovePass] found ${coveredEnough.length} cover points that were already covered $Threshold+ times.")
+
+    state.copy(annotations = remove +: state.annotations)
+  }
+
+
+  private def merge(annos: Seq[TestCoverage]): List[(String, Long)] = {
+    if(annos.isEmpty) return List()
+    if(annos.length == 1) return annos.head.counts
+    throw new NotImplementedError("TODO: implement coverage merging")
   }
 }

@@ -73,11 +73,10 @@ class SingleClockFsmCoverageTest extends LeanTransformSpec(Seq(Dependency(FsmCov
   }
 }
 
-class SingleClockRemoveCoverageTest extends LeanTransformSpec(Seq(Dependency(LineCoveragePass), Dependency(CoverageStatisticsPass), Dependency(RemoveCoverPointsPass), Dependency(FindCoversToRemovePass))) {
+class SingleClockRemoveCoverageTest extends LeanTransformSpec(Seq(Dependency(LineCoveragePass), Dependency(CoverageStatisticsPass), Dependency(RemoveCoverPointsPass), Dependency(FindCoversToRemovePass), Dependency(CoverageScanChainPass))) {
   behavior of "LineCoverage with reduced cover points"
 
   it should "remove already covered cover points from a a single clock FireSim design" in {
-    val m = CircuitTarget("FireSim").module("FireSim")
     val ll = LogLevel.Warn
     val loadCov = LoadCoverageAnnotation("test/resources/chipyard.merged.cover.json")
     // needed in order to be compatible with the firesim build
@@ -85,5 +84,8 @@ class SingleClockRemoveCoverageTest extends LeanTransformSpec(Seq(Dependency(Lin
     val state = Logger.makeScope(Seq(LogLevelAnnotation(ll))) {
       compile(ClockAnalysisExamples.firesimRocketSingleClock, noDedup +: loadCov +: ClockAnalysisExamples.firesimRocketSingleClockAnnos)
     }
+
+    val removed = state.annotations.collectFirst{ case RemoveCoverAnnotation(removed) => removed }.get
+    assert(removed.length == 1999)
   }
 }

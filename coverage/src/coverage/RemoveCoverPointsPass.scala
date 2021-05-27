@@ -77,7 +77,8 @@ object RemoveCoverPointsPass extends Transform with DependencyAPIMigration {
     // for every module, remove the cover points that are requested to be removed in all instances
     modules.map { m =>
       val instanceCount = instanceToModule.count(_._2 == m)
-      val remove = moduleCoverCounts(m).toList.filter(_._2 < instanceCount).map(_._1)
+      val covers = moduleCoverCounts(m).toList
+      val remove = covers.filter(_._2 == instanceCount).map(_._1)
       m -> remove
     }.toMap
   }

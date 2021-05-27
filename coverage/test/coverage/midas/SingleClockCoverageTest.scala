@@ -87,5 +87,9 @@ class SingleClockRemoveCoverageTest extends LeanTransformSpec(Seq(Dependency(Lin
 
     val removed = state.annotations.collectFirst{ case RemoveCoverAnnotation(removed) => removed }.get
     assert(removed.length == 1999)
+
+    val lines = state.circuit.serialize.split('\n').map(_.trim)
+    val coverCount = lines.count(_.contains("cover("))
+    assert(coverCount == 3691 - removed.length)
   }
 }

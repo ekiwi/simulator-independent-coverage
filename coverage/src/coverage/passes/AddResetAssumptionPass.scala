@@ -14,7 +14,7 @@ import firrtl.transforms._
 
 import scala.collection.mutable
 
-//TODO: diable all cover points in the first cycle!
+//TODO: disable all cover points in the first cycle!
 
 /** adds an assumption to the toplevel module that all resets are active in the first cycle */
 object AddResetAssumptionPass extends Transform with DependencyAPIMigration {

@@ -22,7 +22,8 @@ object CoverageStatisticsPass extends Transform with DependencyAPIMigration {
     state
   }
 
-  private val analysis = Seq(generalAnalysis(_), analyzeLineCoverage(_), analyzeToggleCoverage(_), analyzeFsmCoverage(_), analyzeRemovedCoverage(_))
+  private val analysis = Seq(generalAnalysis(_), analyzeLineCoverage(_), analyzeToggleCoverage(_),
+    analyzeFsmCoverage(_), analyzeRemovedCoverage(_), analyzeReadyValidCoverage(_))
 
   private def generalAnalysis(state: CircuitState): Unit = {
     val coverPoints = state.annotations.collect{ case a: CoverageInfo => a }.size
@@ -76,6 +77,14 @@ object CoverageStatisticsPass extends Transform with DependencyAPIMigration {
       logger.info("Removed Cover Points:")
       logger.info(s"- ${counts.sum} coverage points removed because they were already sufficiently covered")
     }
-
   }
+
+  private def analyzeReadyValidCoverage(state: CircuitState): Unit = {
+    val fires = state.annotations.collect{ case a : ReadyValidCoverageAnnotation => a }
+    if(fires.nonEmpty) {
+      logger.info("Ready/Valid Coverage:")
+      logger.info(s"- fire signals covered: ${fires.size}")
+    }
+  }
+
 }

@@ -73,6 +73,19 @@ class SingleClockFsmCoverageTest extends LeanTransformSpec(Seq(Dependency(FsmCov
   }
 }
 
+class SingleClockReadyValidCoverageTest extends LeanTransformSpec(Seq(Dependency(ReadyValidCoveragePass), Dependency(CoverageStatisticsPass))) {
+  behavior of "ReadyValidCoverage"
+
+
+  it should "instrument a single clock RiscV Mini design" in {
+    val ll = LogLevel.Info
+    val state = Logger.makeScope(Seq(LogLevelAnnotation(ll))) {
+      compile(ClockAnalysisExamples.riscvMini, ClockAnalysisExamples.riscvMiniAnnos)
+    }
+  }
+}
+
+
 class SingleClockRemoveCoverageTest extends LeanTransformSpec(Seq(Dependency(LineCoveragePass), Dependency(CoverageStatisticsPass), Dependency(RemoveCoverPointsPass), Dependency(FindCoversToRemovePass), Dependency(CoverageScanChainPass))) {
   behavior of "LineCoverage with reduced cover points"
 

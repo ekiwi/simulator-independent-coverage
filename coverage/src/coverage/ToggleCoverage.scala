@@ -25,13 +25,34 @@ object ToggleCoverage {
   private def passAnnos = passes.map(p => RunFirrtlTransformAnnotation(p))
 
   def processCoverage(annos: AnnotationSeq): ToggleCoverageData = {
-    val cov = Coverage.collectTestCoverage(annos).toMap
-    val moduleToInst = Coverage.collectModuleInstances(annos).groupBy(_._2).map{ case (k,v) => k -> v.map(_._1) }
     val infos = annos.collect { case a: ToggleCoverageAnnotation => a }
+    if(infos.isEmpty) return ToggleCoverageData(List())
+    val cov = Coverage.collectTestCoverage(annos).toMap
+    val moduleToInst = Coverage.moduleToInstances(annos)
 
+    val counts = infos.flatMap { info =>
+      moduleToInst(info.target.module).flatMap { inst =>
+        val count = cov(Coverage.path(inst, info.target.ref))
+        info.signals.map { signal =>
+          val instance = signal.path.map(_._1.value).mkString(".")
+          val module = signal.leafModule
+          val ref = signal.ref
+          val r = ((instance, module), ref, (info.bit, count))
+          println(signal)
+          println(r)
+          r
+        }
+      }
+    }
 
-
-    ???
+    val byModule = counts.groupBy(_._1).toSeq.sortBy(_._1)
+    val bySignal = byModule.map { case (k, vs) =>
+      k -> vs
+        .map{ case (_, signal, count) => signal -> count }
+        .groupBy(_._1).toSeq.sortBy(_._1)
+        .map{ case (signal, counts) => signal -> counts.map(_._2) }
+    }
+    ToggleCoverageData(bySignal)
   }
 }
 

@@ -63,12 +63,14 @@ object Coverage {
   type Lines = List[(String, List[Int])]
   private val chiselFileInfo: Regex = raw"\s*([^\.]+\.\w+) (\d+):(\d+)".r
 
-  def parseFileInfo(i: ir.FileInfo): (String, Int) = i.unescaped match {
-    case chiselFileInfo(filename, line, col) => (filename, line.toInt)
+  def parseFileInfo(i: ir.FileInfo): Seq[(String, Int)] = {
+    chiselFileInfo.findAllIn(i.unescaped).map {
+      case chiselFileInfo(filename, line, col) => (filename, line.toInt)
+    }.toSeq
   }
 
   def infosToLines(infos: Seq[ir.Info]): Lines = {
-    val parsed = findFileInfos(infos).map(parseFileInfo)
+    val parsed = findFileInfos(infos).flatMap(parseFileInfo)
     val byFile = parsed.groupBy(_._1).toList.sortBy(_._1)
     byFile.map { case (filename, e) => filename -> e.map(_._2).toSet.toList.sorted }
   }

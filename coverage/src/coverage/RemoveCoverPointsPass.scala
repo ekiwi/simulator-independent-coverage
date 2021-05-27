@@ -27,7 +27,7 @@ object RemoveCoverPointsPass extends Transform with DependencyAPIMigration {
   override def optionalPrerequisites = Coverage.AllPasses
 
   // we want to run before the actual Verilog is emitted
-  override def optionalPrerequisiteOf = AllEmitters()
+  override def optionalPrerequisiteOf = AllEmitters() ++ Seq(Dependency(CoverageStatisticsPass))
 
   override def execute(state: CircuitState): CircuitState = {
     val removePaths = state.annotations.collect { case RemoveCoverAnnotation(remove) => remove }.flatten
@@ -82,15 +82,32 @@ object RemoveCoverPointsPass extends Transform with DependencyAPIMigration {
 
 case class LoadCoverageAnnotation(filename: String) extends NoTargetAnnotation
 
+object LoadTestCoveragePass extends Transform with DependencyAPIMigration {
+  override def prerequisites = Seq()
+  override def invalidates(a: Transform) = false
+
+  override def execute(state: CircuitState): CircuitState = {
+    val files = state.annotations.collect { case LoadCoverageAnnotation(filename) => filename }
+    if(files.isEmpty) { state } else {
+      val annos = loadFiles(files)
+      state.copy(annotations = annos ++: state.annotations)
+    }
+  }
+
+  private def loadFiles(files: Seq[String]): Seq[TestCoverage] = files.flatMap { file =>
+    JsonProtocol.deserialize(FileUtils.getText(file)).collect { case t: TestCoverage => t }
+  }
+}
+
 /** reads in one or several JSON files containing one or several [[TestCoverage]] annotations
  *  and generates a [[RemoveCoverAnnotation]] for all cover points that were covered at least once.
  *  */
 object FindCoversToRemovePass extends Transform with DependencyAPIMigration {
-  override def prerequisites = Seq()
+  override def prerequisites = Seq(Dependency(LoadTestCoveragePass))
   override def invalidates(a: Transform) = false
   override def optionalPrerequisiteOf = Seq(Dependency(RemoveCoverPointsPass))
 
-  val Threshold: Long = 1 // at least covered once
+  val Threshold: Long = 10 // at 10 covered once
 
   override def execute(state: CircuitState): CircuitState = {
     val annos = state.annotations.collect { case a: TestCoverage => a }

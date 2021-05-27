@@ -22,7 +22,7 @@ object CoverageStatisticsPass extends Transform with DependencyAPIMigration {
     state
   }
 
-  private val analysis = Seq(generalAnalysis(_), analyzeLineCoverage(_), analyzeToggleCoverage(_), analyzeFsmCoverage(_))
+  private val analysis = Seq(generalAnalysis(_), analyzeLineCoverage(_), analyzeToggleCoverage(_), analyzeFsmCoverage(_), analyzeRemovedCoverage(_))
 
   private def generalAnalysis(state: CircuitState): Unit = {
     val coverPoints = state.annotations.collect{ case a: CoverageInfo => a }.size
@@ -68,5 +68,14 @@ object CoverageStatisticsPass extends Transform with DependencyAPIMigration {
         logger.info(s"- ${stateReg}: ${states.length} states, ${transitions.length} transitions")
       }
     }
+  }
+
+  private def analyzeRemovedCoverage(state: CircuitState): Unit = {
+    val counts = state.annotations.collect{ case a: RemoveCoverAnnotation => a.remove.length }
+    if(counts.nonEmpty) {
+      logger.info("Removed Cover Points:")
+      logger.info(s"- ${counts.sum} coverage points removed because they were already sufficiently covered")
+    }
+
   }
 }

@@ -4,6 +4,7 @@ import coverage._
 import coverage.passes.{ClockAnalysisExamples, LeanTransformSpec}
 import firrtl.annotations.CircuitTarget
 import firrtl.options.Dependency
+import firrtl.transforms.{NoCircuitDedupAnnotation, NoDedupAnnotation}
 import logger.{LogLevel, LogLevelAnnotation, Logger}
 
 
@@ -12,10 +13,13 @@ class SingleClockCoverageScanChainTest extends LeanTransformSpec(Seq(Dependency(
 
   it should "instrument a single clock FireSim design" in {
     val m = CircuitTarget("FireSim").module("FireSim")
-    val ll = LogLevel.Info
+    val ll = LogLevel.Warn
+    val opts = CoverageScanChainOptions()
     val state = Logger.makeScope(Seq(LogLevelAnnotation(ll))) {
-      compile(ClockAnalysisExamples.firesimRocketSingleClock)
+      compile(ClockAnalysisExamples.firesimRocketSingleClock, Seq(opts))
     }
+
+    val covers = state.annotations.collect{ case c : CoverageScanChainInfo => c.covers }.head
   }
 }
 
@@ -65,6 +69,21 @@ class SingleClockFsmCoverageTest extends LeanTransformSpec(Seq(Dependency(FsmCov
     val ll = LogLevel.Warn
     val state = Logger.makeScope(Seq(LogLevelAnnotation(ll))) {
       compile(ClockAnalysisExamples.riscvMini, ClockAnalysisExamples.riscvMiniAnnos)
+    }
+  }
+}
+
+class SingleClockRemoveCoverageTest extends LeanTransformSpec(Seq(Dependency(LineCoveragePass), Dependency(CoverageStatisticsPass), Dependency(RemoveCoverPointsPass), Dependency(FindCoversToRemovePass))) {
+  behavior of "LineCoverage with reduced cover points"
+
+  it should "remove already covered cover points from a a single clock FireSim design" in {
+    val m = CircuitTarget("FireSim").module("FireSim")
+    val ll = LogLevel.Info
+    val loadCov = LoadCoverageAnnotation("../benchmarks/chipyard/FireSim-FireSimRocketConfig-BaseF1Config/asm-test-coverage/rv64mi-p-access.out.cover.json")
+    // needed in order to be compatible with the firesim build
+    val noDedup = NoCircuitDedupAnnotation
+    val state = Logger.makeScope(Seq(LogLevelAnnotation(ll))) {
+      compile(ClockAnalysisExamples.firesimRocketSingleClock, noDedup +: loadCov +: ClockAnalysisExamples.firesimRocketSingleClockAnnos)
     }
   }
 }

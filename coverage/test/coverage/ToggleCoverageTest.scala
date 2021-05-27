@@ -68,7 +68,7 @@ class ResetBlackbox extends ExtModule {
 class ToggleCoverageTest extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "ToggleCoverage"
 
-  it should "parse the results from the simulator" ignore {
+  it should "parse the results from the simulator" in {
     val r = runTest()
 
     val data = ToggleCoverage.processCoverage(r)

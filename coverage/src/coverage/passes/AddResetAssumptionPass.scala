@@ -14,8 +14,6 @@ import firrtl.transforms._
 
 import scala.collection.mutable
 
-//TODO: disable all cover points in the first cycle!
-
 /** adds an assumption to the toplevel module that all resets are active in the first cycle */
 object AddResetAssumptionPass extends Transform with DependencyAPIMigration {
   // run on lowered firrtl
@@ -30,18 +28,18 @@ object AddResetAssumptionPass extends Transform with DependencyAPIMigration {
 
   override def execute(state: CircuitState): CircuitState = {
     val annos = mutable.ListBuffer[Annotation]()
+    val c = CircuitTarget(state.circuit.main)
     val modules = state.circuit.modules.map {
-      case mod: ir.Module if mod.name == state.circuit.main => onMain(mod, annos)
+      case mod: ir.Module => onModule(c, mod, annos)
       case other => other
     }
 
     state.copy(circuit = state.circuit.copy(modules = modules), annotations = annos.toList ++: state.annotations)
   }
 
-  private def onMain(m: ir.Module, annos: mutable.ListBuffer[Annotation]): ir.Module = {
-    val resets = Builder.findResets(m)
+  private def onModule(c: CircuitTarget, m: ir.Module, annos: mutable.ListBuffer[Annotation]): ir.Module = {
     val clock = Builder.findClock(m ,logger)
-    if(resets.isEmpty || clock.isEmpty) return m
+    if(clock.isEmpty) return m
 
     // create a register to know when we are in the "init" cycle
     val namespace = Namespace(m)
@@ -49,15 +47,27 @@ object AddResetAssumptionPass extends Transform with DependencyAPIMigration {
       Utils.BoolType, clock.get, reset = Utils.False(), init = Utils.True())
     val regRef = ir.Reference(reg)
     val next = ir.Connect(ir.NoInfo, regRef, Utils.False())
-    annos.append(MakePresetRegAnnotation(CircuitTarget(m.name).module(m.name).ref(reg.name)))
+    val notInit = ir.DefNode(ir.NoInfo, namespace.newName("enCover"), Utils.not(regRef))
+    annos.append(MakePresetRegAnnotation(c.module(m.name).ref(reg.name)))
 
-    // assume that isInitCycle => reset
-    val resetAssumptions = resets.map { r =>
-      ir.Verification(ir.Formal.Assume, ir.NoInfo, clock.get, r, regRef, ir.StringLit(""), namespace.newName(r.serialize + "_active"))
-    }
+    val isMain = c.circuit == m.name
+    val resetAssumptions = if(isMain) {
+      val resets = Builder.findResets(m)
+      // assume that isInitCycle => reset
+      resets.map { r =>
+        ir.Verification(ir.Formal.Assume, ir.NoInfo, clock.get, r, regRef, ir.StringLit(""), namespace.newName(r.serialize + "_active"))
+      }
+    } else { List() }
 
-    val body = ir.Block(Seq(m.body, reg, next) ++ resetAssumptions)
+    // make sure the we do not cover anything in the first cycle
+    val guardedCovers = onStmt(m.body, ir.Reference(notInit))
+    val body = ir.Block(Seq(reg, next, notInit) ++ resetAssumptions ++ Seq(guardedCovers))
 
     m.copy(body = body)
+  }
+
+  private def onStmt(s: ir.Statement, en: ir.Expression): ir.Statement = s match {
+    case v: ir.Verification if v.op == ir.Formal.Cover => v.withEn(Utils.and(en, v.en))
+    case other => other.mapStmt(onStmt(_, en))
   }
 }

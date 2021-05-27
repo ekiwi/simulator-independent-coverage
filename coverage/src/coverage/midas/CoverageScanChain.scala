@@ -99,7 +99,7 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     val ii = infos.map(i => i.name -> i).toMap
 
     val mainInfo = ii(main.module)
-    val covers = getCovers(main.module, main.module + ".", ii)
+    val covers = getCovers(main.module, "", ii)
 
     CoverageScanChainInfo(main, mainInfo.prefix, opt.counterWidth, covers)
   }

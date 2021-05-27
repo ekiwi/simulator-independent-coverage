@@ -78,8 +78,8 @@ class SingleClockRemoveCoverageTest extends LeanTransformSpec(Seq(Dependency(Lin
 
   it should "remove already covered cover points from a a single clock FireSim design" in {
     val m = CircuitTarget("FireSim").module("FireSim")
-    val ll = LogLevel.Info
-    val loadCov = LoadCoverageAnnotation("../benchmarks/chipyard/FireSim-FireSimRocketConfig-BaseF1Config/asm-test-coverage/rv64mi-p-access.out.cover.json")
+    val ll = LogLevel.Warn
+    val loadCov = LoadCoverageAnnotation("test/resources/chipyard.merged.cover.json")
     // needed in order to be compatible with the firesim build
     val noDedup = NoCircuitDedupAnnotation
     val state = Logger.makeScope(Seq(LogLevelAnnotation(ll))) {

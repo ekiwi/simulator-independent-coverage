@@ -103,6 +103,14 @@ final class CoverageShellOptions extends RegisteredLibrary {
       toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(AddResetAssumptionPass))),
       helpText = "adds an assumption to the toplevel module that all resets are active in the first cycle"
     ),
+    new ShellOption[String](
+      longOption = "remove-covered",
+      toAnnotationSeq = a => Seq(LoadCoverageAnnotation(a),
+        RunFirrtlTransformAnnotation(Dependency(RemoveCoverPointsPass)),
+        RunFirrtlTransformAnnotation(Dependency(FindCoversToRemovePass))),
+      helpText = "removes all points that have been covered at least N times",
+      helpValueName = Some("<...cove.json>")
+    ),
   )
 
   private def parseModuleTarget(a: String): ModuleTarget = {

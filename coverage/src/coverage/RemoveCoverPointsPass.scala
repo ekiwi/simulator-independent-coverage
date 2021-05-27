@@ -4,6 +4,7 @@
 package coverage
 
 import chiseltest.coverage.{ModuleInstancesAnnotation, TestCoverage}
+import coverage.midas.CoverageScanChainPass
 import firrtl._
 import firrtl.annotations._
 import firrtl.options.Dependency
@@ -27,7 +28,8 @@ object RemoveCoverPointsPass extends Transform with DependencyAPIMigration {
   override def optionalPrerequisites = Coverage.AllPasses
 
   // we want to run before the actual Verilog is emitted
-  override def optionalPrerequisiteOf = AllEmitters() ++ Seq(Dependency(CoverageStatisticsPass))
+  override def optionalPrerequisiteOf = AllEmitters() ++
+      Seq(Dependency(CoverageStatisticsPass), Dependency(CoverageScanChainPass))
 
   override def execute(state: CircuitState): CircuitState = {
     val removePaths = state.annotations.collect { case RemoveCoverAnnotation(remove) => remove }.flatten

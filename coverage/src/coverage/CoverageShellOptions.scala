@@ -49,6 +49,11 @@ final class CoverageShellOptions extends RegisteredLibrary {
       toAnnotationSeq = _ => ToggleCoverage.wires ++ Common,
       helpText = "enable toggle coverage instrumentation for all wires"
     ),
+    new ShellOption[Unit](
+      longOption = "ready-valid-coverage",
+      toAnnotationSeq = _ => ReadyValidCoverage.annotations ++ Common,
+      helpText = "enable coverage of read valid interfaces on I/O ports"
+    ),
     new ShellOption[String](
       longOption = "do-not-cover",
       toAnnotationSeq = a => Seq(DoNotCoverAnnotation(parseModuleTarget(a))),

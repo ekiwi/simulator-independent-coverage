@@ -66,10 +66,12 @@ object RemoveCoverPointsPass extends Transform with DependencyAPIMigration {
       val parts = path.split('.')
       val name = parts.last
       val instance = parts.dropRight(1).mkString(".")
-      val mod = instToMod.getOrElse(instance,
-        throw new RuntimeException(s"Unknown instance: $instance!")
-      )
-      moduleCoverCounts(mod)(name) = moduleCoverCounts(mod).getOrElse(name, 0) + 1
+      instToMod.get(instance) match {
+        case Some(mod) =>
+          moduleCoverCounts(mod)(name) = moduleCoverCounts(mod).getOrElse(name, 0) + 1
+        case None =>
+          logger.warn(s"[WARN] unknown instance: $instance")
+      }
     }
 
     // for every module, remove the cover points that are requested to be removed in all instances

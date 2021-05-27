@@ -37,6 +37,8 @@ object CoverageInfoEmitter extends Transform with DependencyAPIMigration {
       case MemoryToggleCoverage => true
       case RegisterToggleCoverage => true
       case PortToggleCoverage => true
+      case _: RemoveCoverAnnotation => true
+      case _: LoadCoverageAnnotation => true
       case _ => false
     }
 

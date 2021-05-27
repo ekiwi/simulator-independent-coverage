@@ -32,6 +32,13 @@ object FsmCoverage {
       }
     }
   }
+
+  def textReport(data: Seq[FsmCoverageData]): Iterable[String] = data.flatMap { fsm =>
+    Seq(
+      fsm.name,
+      fsm.states.map{ case (name, count) => s"$name ($count)" }.mkString(", ")) ++
+      fsm.transitions.map{ case ((from, to), count) => s"$from -> $to: $count" }
+  }
 }
 
 case class FsmCoverageData(name: String, states: List[(String, Long)], transitions: List[((String, String), Long)])

@@ -27,6 +27,10 @@ object ReadyValidCoverage {
       }
     }
   }
+
+  def textReport(data: Seq[ReadyValidCoverageData]): Iterable[String] = {
+    data.map(d => s"${d.name}: ${d.count}")
+  }
 }
 
 case class ReadyValidCoverageData(name: String, count: Long)

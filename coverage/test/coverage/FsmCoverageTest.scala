@@ -42,19 +42,19 @@ class FsmCoverageTest extends AnyFlatSpec with ChiselScalatestTester {
     val r = test(new FifoRegister(8)).withAnnotations(FsmCoverage.annotations ++ Seq(WriteVcdAnnotation)) { dut =>
       (0 until 4).foreach { _ =>
         // push until full
-        while (!dut.io.enq.full.peek().litToBoolean) {
-          dut.io.enq.din.poke(BigInt(8, rand).U)
+        while (dut.io.enq.ready.peek().litToBoolean) {
+          dut.io.enq.bits.poke(BigInt(8, rand).U)
           val skip = rand.nextBoolean()
-          dut.io.enq.write.poke((!skip).B)
-          dut.io.deq.read.poke(false.B)
+          dut.io.enq.valid.poke((!skip).B)
+          dut.io.deq.ready.poke(false.B)
           dut.clock.step()
         }
 
         // pop until empty
-        while (!dut.io.deq.empty.peek().litToBoolean) {
-          dut.io.enq.write.poke(false.B)
+        while (dut.io.deq.valid.peek().litToBoolean) {
+          dut.io.enq.valid.poke(false.B)
           val skip = rand.nextBoolean()
-          dut.io.deq.read.poke((!skip).B)
+          dut.io.deq.ready.poke((!skip).B)
           dut.clock.step()
         }
       }

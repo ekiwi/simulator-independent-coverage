@@ -23,7 +23,7 @@ object ReadyValidCoverage {
       val top = f.target.circuit + "."
       moduleToInst(f.target.module).map { inst =>
         val count = cov(Coverage.path(inst, f.target.ref))
-        ReadyValidCoverageData(f.bundle, count)
+        ReadyValidCoverageData(top + Coverage.path(inst, f.bundle), count)
       }
     }
   }

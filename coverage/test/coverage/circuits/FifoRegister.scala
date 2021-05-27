@@ -16,21 +16,7 @@ package coverage.circuits
 
 import chisel3._
 import chisel3.experimental.ChiselEnum
-
-class WriterIO(size: Int) extends Bundle {
-  val write = Input(Bool())
-  val full = Output(Bool())
-  val din = Input(UInt(size.W))
-}
-//- end
-
-//- start bubble_fifo_reader_io
-class ReaderIO(size: Int) extends Bundle {
-  val read = Input(Bool())
-  val empty = Output(Bool())
-  val dout = Output(UInt(size.W))
-}
-//- end
+import chisel3.util._
 
 object FifoState extends ChiselEnum {
   val Empty, Full = Value
@@ -42,20 +28,20 @@ object FifoState extends ChiselEnum {
 //- start bubble_fifo_register
 class FifoRegister(size: Int) extends Module {
   val io = IO(new Bundle {
-    val enq = new WriterIO(size)
-    val deq = new ReaderIO(size)
+    val enq = Flipped(Decoupled(UInt(size.W)))
+    val deq = Decoupled(UInt(size.W))
   })
 
   val stateReg = RegInit(FifoState.Empty)
   val dataReg = RegInit(0.U(size.W))
 
   when(stateReg === FifoState.Empty) {
-    when(io.enq.write) {
+    when(io.enq.fire()) {
       stateReg := FifoState.Full
-      dataReg := io.enq.din
+      dataReg := io.enq.bits
     }
   }.elsewhen(stateReg === FifoState.Full) {
-    when(io.deq.read) {
+    when(io.deq.fire()) {
       stateReg := FifoState.Empty
       dataReg := 0.U // just to better see empty slots in the waveform
     }
@@ -63,7 +49,7 @@ class FifoRegister(size: Int) extends Module {
     // There should not be an otherwise state
   }
 
-  io.enq.full := (stateReg === FifoState.Full)
-  io.deq.empty := (stateReg === FifoState.Empty)
-  io.deq.dout := dataReg
+  io.enq.ready := (stateReg === FifoState.Empty)
+  io.deq.valid := (stateReg === FifoState.Full)
+  io.deq.bits := dataReg
 }

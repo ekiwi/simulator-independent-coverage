@@ -1,10 +1,8 @@
 [options]
 mode cover
-depth 100
+depth 50
 
 [engines]
-smtbmc z3
-smtbmc yices
 smtbmc boolector
 
 [script]

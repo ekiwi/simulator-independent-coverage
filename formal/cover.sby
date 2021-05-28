@@ -1,0 +1,15 @@
+[options]
+mode cover
+depth 100
+
+[engines]
+smtbmc z3
+smtbmc yices
+smtbmc boolector
+
+[script]
+read -formal Tile.sv
+prep -top Tile
+
+[files]
+Tile.sv

@@ -15,6 +15,7 @@ import firrtl._
 object CoverageStatisticsPass extends Transform with DependencyAPIMigration {
   override def prerequisites = Seq()
   override def optionalPrerequisites = Coverage.AllPasses
+  override def optionalPrerequisiteOf = AllEmitters()
   override def invalidates(a: Transform) = false
 
   override def execute(state: CircuitState): CircuitState = {

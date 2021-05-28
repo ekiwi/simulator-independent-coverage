@@ -5,7 +5,7 @@
 package coverage.passes
 
 
-import coverage.AllEmitters
+import coverage.{AllEmitters, Coverage}
 import coverage.midas.Builder
 import firrtl._
 import firrtl.annotations._
@@ -19,10 +19,13 @@ object AddResetAssumptionPass extends Transform with DependencyAPIMigration {
   // run on lowered firrtl
   override def prerequisites = Seq(
     Dependency(firrtl.passes.ExpandWhens), Dependency(firrtl.passes.LowerTypes),
-    Dependency(firrtl.transforms.RemoveReset))
+    Dependency(firrtl.transforms.RemoveReset),
+    // try to work around dead code elimination removing our registers
+    Dependency[firrtl.transforms.DeadCodeElimination]
+  )
   override def invalidates(a: Transform) = false
   // since we generate PresetRegAnnotations, we need to run after preset propagation
-  override def optionalPrerequisites = Seq(Dependency[PropagatePresetAnnotations])
+  override def optionalPrerequisites = Seq(Dependency[PropagatePresetAnnotations]) ++ Coverage.AllPasses
   // we want to run before the actual Verilog is emitted
   override def optionalPrerequisiteOf = AllEmitters()
 
@@ -33,8 +36,8 @@ object AddResetAssumptionPass extends Transform with DependencyAPIMigration {
       case mod: ir.Module => onModule(c, mod, annos)
       case other => other
     }
-
-    state.copy(circuit = state.circuit.copy(modules = modules), annotations = annos.toList ++: state.annotations)
+    val circuit = state.circuit.copy(modules = modules)
+    state.copy(circuit = circuit, annotations = annos.toList ++: state.annotations)
   }
 
   private def onModule(c: CircuitTarget, m: ir.Module, annos: mutable.ListBuffer[Annotation]): ir.Module = {

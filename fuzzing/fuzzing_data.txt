@@ -1,0 +1,18 @@
+# mux toggle
+Executed 19080019 target cycles (incl. 949536 reset cycles).
+Total time in simulator: 1097568ms
+Total time for getCoverage: 435362ms (39.66610740395425%)
+0.017383896814355676 MHz
+
+# line
+Executed 16902661 target cycles (incl. 749104 reset cycles).
+Total time in simulator: 1123684ms
+Total time for getCoverage: 570326ms (50.75506661972137%)
+0.015042179171125672 MHz
+
+# line + mux toggle
+Executed 12002534 target cycles (incl. 637178 reset cycles).
+Total time in simulator: 1129919ms
+Total time for getCoverage: 726055ms (64.2572149615112%)
+0.010622465289085328 MHz
+

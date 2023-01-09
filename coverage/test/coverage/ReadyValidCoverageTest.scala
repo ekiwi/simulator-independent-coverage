@@ -3,8 +3,6 @@ package coverage
 import coverage.circuits.FifoRegister
 import chiseltest._
 import chisel3._
-import chiseltest.experimental.TestOptionBuilder.ChiselScalatestOptionBuilder
-import chiseltest.internal.{VerilatorBackendAnnotation, WriteVcdAnnotation}
 import firrtl.AnnotationSeq
 import org.scalatest.flatspec.AnyFlatSpec
 

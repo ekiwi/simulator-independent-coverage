@@ -8,8 +8,6 @@ import circuits.Test1Module
 import chisel3._
 import chiseltest._
 import chisel3.experimental.ExtModule
-import chiseltest.experimental.TestOptionBuilder.ChiselScalatestOptionBuilder
-import chiseltest.internal.{VerilatorBackendAnnotation, WriteVcdAnnotation}
 import firrtl.AnnotationSeq
 import firrtl.annotations.{CircuitTarget, ReferenceTarget}
 import firrtl.options.Dependency

@@ -28,10 +28,10 @@ abstract class SimulatorCoverageTest(name: String, backend: SimulatorAnnotation)
     val cov = getCoverage(r)
 
     // the cover point in the main module are not prefixed
-    assert(cov.keys.toList == List("cover_0"))
+    assert(cov.keys.toList == List("user_cov"))
 
-    // since we executed one step and all inputs are zero by default, we expect the count to be 3
-    assert(cov("cover_0") == 2)
+    // since we executed one step and all inputs are zero by default, we expect the count to be 1
+    assert(cov("user_cov") == 1)
   }
 
   it should "report count for all user cover points (with submodules)" in {
@@ -41,10 +41,12 @@ abstract class SimulatorCoverageTest(name: String, backend: SimulatorAnnotation)
     val cov = getCoverage(r)
 
     // the cover point in the main module are not prefixed, but the one in the child module are
-    assert(cov.keys.toList.sorted == List("c0.cover_0", "c1.cover_0", "cover_0"))
+    assert(cov.keys.toList.sorted == List("c0.user_cov_2", "c1.user_cov_2", "user_cov"))
 
     // since we executed one step and all inputs are zero by default, we expect the count to be 3
-    assert(cov("cover_0") == 2)
+    assert(cov("user_cov") == 1)
+    assert(cov("c0.user_cov_2") == 0)
+    assert(cov("c1.user_cov_2") == 0)
   }
 
   it should "generate the same coverage as other simulators" in {
@@ -57,26 +59,27 @@ abstract class SimulatorCoverageTest(name: String, backend: SimulatorAnnotation)
     }
     val cov = getCoverage(r)
     val expected = Map(
-      "cover_0" -> 130, "l_1" -> 248, "l_0" -> 135, "l_3" -> 1002, "l_2" -> 754,
-      "c1.l_0" -> 1002, "c0.cover_0" -> 370,
-      "c0.l_0" -> 1002, "c1.cover_0" -> 366
+      "user_cov" -> 129, "l_1" -> 248, "l_0" -> 135, "l_3" -> 1001, "l_2" -> 753,
+      "c1.l_0" -> 1001, "c0.user_cov_2" -> 370,
+      "c0.l_0" -> 1001, "c1.user_cov_2" -> 366
     )
     assert(cov == expected)
   }
 
+  // this is an integration test that uses chisel3.experimental.verification.cover to estimate PI
   it should "allow us to estimate pi" in {
     val rand = new scala.util.Random(0)
     val r = test(new PiEstimator).withAnnotations(noAutoCov) { dut =>
       (0 until 1000).foreach { _ =>
-        dut.x.poke(BigInt(8, rand).S)
-        dut.y.poke(BigInt(8, rand).S)
+        dut.xIn.poke(BigInt(8, rand).U)
+        dut.yIn.poke(BigInt(8, rand).U)
         dut.clock.step()
       }
     }
 
     val cov = getCoverage(r)
-    val inCircle = cov("cover_0")
-    val inRectangle = cov("cover_1")
+    val inCircle = cov("inCircleCover")
+    val inRectangle = cov("inRectangleCover")
     val pi = 4.0 * inCircle.toDouble / inRectangle.toDouble
     val error = math.abs(pi - math.Pi)
     assert(error < 0.0329)
@@ -93,13 +96,14 @@ class TreadleCoverageTest extends SimulatorCoverageTest("Treadle", TreadleBacken
 class VerilatorCoverageTest extends SimulatorCoverageTest("Verilator", VerilatorBackendAnnotation) {}
 
 private class PiEstimator extends Module {
-  val x = IO(Input(SInt(8.W)))
-  val y = IO(Input(SInt(8.W)))
+  val xIn = IO(Input(UInt(8.W)))
+  val yIn = IO(Input(UInt(8.W)))
   val inCircle = IO(Output(Bool()))
   val inRectangle = IO(Output(Bool()))
   val radius = 100
+  val (x, y) = (xIn.asSInt, yIn.asSInt)
   inCircle := (x * x + y * y) <= (radius * radius).S
   inRectangle := (x <= radius.S && x >= -radius.S) && (y <= radius.S && y >= -radius.S)
-  cover(inCircle)
-  cover(inRectangle)
+  cover(inCircle).suggestName("inCircleCover")
+  cover(inRectangle).suggestName("inRectangleCover")
 }

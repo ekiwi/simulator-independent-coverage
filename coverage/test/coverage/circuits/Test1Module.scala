@@ -2,6 +2,10 @@
 
 package coverage.circuits
 
+// NOTE: This module is contained in its own file in order to prevent any line numbers from changing.
+// It is used (among other things) for testing our automatic line coverage pass which
+// will give us different results if things are moved around in the code.
+
 import chisel3._
 
 class Test1Module(withSubmodules: Boolean = false) extends Module {
@@ -21,7 +25,7 @@ class Test1Module(withSubmodules: Boolean = false) extends Module {
   }
 
   when(a === 0.U) {
-    cover(true.B, "user coverage")
+    cover(true.B, "user coverage").suggestName("user_cov")
   }
 
   when(a === 1.U) {
@@ -42,5 +46,5 @@ class Test1Module(withSubmodules: Boolean = false) extends Module {
 
 class SubModule1 extends Module {
   val a = IO(Input(UInt(3.W)))
-  cover(a > 4.U, "user coverage 2")
+  cover(a > 4.U, "user coverage 2").suggestName("user_cov_2")
 }

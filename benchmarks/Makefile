@@ -13,9 +13,18 @@ firrtl: $(firrtl_jar)
 	# hack to ignore the top level module
 	$(firrtl_bin) -i $< -E sverilog -o $@ --line-coverage --emit-cover-info --do-not-cover $(shell head -n 1 $< | cut -d' ' -f 2):$(shell head -n 1 $< | cut -d' ' -f 2)
 
+%_line.lo.fir: %.fir $(firrtl_jar)
+	# hack to ignore the top level module
+	$(firrtl_bin) -i $< -E low -o %_line --line-coverage --emit-cover-info --do-not-cover $(shell head -n 1 $< | cut -d' ' -f 2):$(shell head -n 1 $< | cut -d' ' -f 2)
+
+
 %_toggle.sv: %.fir $(firrtl_jar)
 	# hack to ignore the top level module
 	$(firrtl_bin) -i $< -E sverilog -o $@ --toggle-coverage --emit-cover-info --do-not-cover $(shell head -n 1 $< | cut -d' ' -f 2):$(shell head -n 1 $< | cut -d' ' -f 2)
+	
+%_toggle.lo.fir: %.fir $(firrtl_jar)
+	# hack to ignore the top level module
+	$(firrtl_bin) -i $< -E low -o %_toggle --toggle-coverage --emit-cover-info --do-not-cover $(shell head -n 1 $< | cut -d' ' -f 2):$(shell head -n 1 $< | cut -d' ' -f 2)
 
 # Testbench top (same for all simulator binaries)
 %.cpp: %.fir template.cpp

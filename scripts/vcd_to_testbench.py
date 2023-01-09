@@ -165,6 +165,94 @@ def make_verilator_testbench(filename, top, inputs):
         ))
 
 
+EssentTemplate = """
+#include <verilated.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <iostream>
+#include "V{top}.h"
+#if VM_TRACE
+# include <verilated_vcd_c.h> // Trace file format header
+#endif
+
+#define TOP_TYPE V{top}
+
+// Current simulation time
+vluint64_t main_time = 0;
+// Called by $time in Verilog
+double sc_time_stamp() {{
+    return main_time;
+}}
+
+
+int main(int argc, char **argv, char **env) {{
+    // Prevent unused variable warnings
+    if (false && argc && argv && env) {{}}
+    Verilated::debug(0);
+
+    Verilated::commandArgs(argc, argv);
+    TOP_TYPE* top = new TOP_TYPE;
+
+    // If verilator was invoked with --trace
+#if VM_TRACE
+    Verilated::traceEverOn(true);
+    VerilatedVcdC* tfp = new VerilatedVcdC;
+    top->trace(tfp, 99);
+    tfp->open("dump.vcd");
+#endif
+
+{input_vars}    
+
+{update}
+
+    // load data from file
+    FILE* pFile = fopen("{input_file}", "r");
+    if(pFile == nullptr) {{
+        std::cerr << "Could not open {input_file}" << std::endl;
+    }}
+
+    while (!Verilated::gotFinish() && !feof(pFile)) {{
+        main_time++;
+        top->clock = !top->clock;
+        if (!top->clock) {{ // after negative edge
+
+fscanf(pFile, {scan});
+{update}
+
+        }}
+        top->eval();
+#if VM_TRACE
+        if (tfp) tfp->dump(main_time);
+#endif
+    }}
+    top->final();
+
+#if VM_COVERAGE
+    VerilatedCov::write("coverage.dat");
+#endif
+#if VM_TRACE
+    if (tfp) {{ tfp->close(); }}
+#endif
+
+    delete top;
+    exit(0);
+}}
+
+"""
+
+def make_essent_testbench(filename, top, input):
+    input_file = "inputs.txt"
+    input_vars = "\n".join(f"uint64_t {n} = 0;" for n,_ in inputs)
+    update = "\n".join(f"top->{n} = {n};" for n,_ in inputs)
+    scan_str = '"' + " ".join("%x" for _ in inputs) + '\\n", '
+    scan = scan_str + ", ".join(f"&{n}" for n,_ in inputs)
+
+    with open(filename, "w") as f:
+        f.write(EssentTemplate.format(
+            top=top, input_file=input_file, input_vars=input_vars,
+            update=update, scan=scan
+        ))
+
 def tpe_to_width(tpe: str) -> int:
     tpe = tpe.strip()
     if tpe == "Reset": return 1
@@ -201,6 +289,7 @@ def parse_args():
     parser.add_argument('-f', '--firrtl', help="firrtl of the design in the VCD")
     parser.add_argument('--tbv', help="filename for the verilog testbench")
     parser.add_argument('--tbcc', help="filename for the verilator C++ testbench")
+    parser.add_argument('--tbessent', help="filename for the essent C++ testbench")
     parser.add_argument('--inputs', help="filename for inputs.txt stimuli file")
     args =  parser.parse_args()
 
@@ -211,17 +300,19 @@ def parse_args():
     if not os.path.isfile(args.firrtl):
         raise RuntimeError(f"Wasn't able to find FIRRTL {args.firrtl}")
 
-    return args.vcd, args.firrtl, args.tbv, args.tbcc, args.inputs
+    return args.vcd, args.firrtl, args.tbv, args.tbcc, args.tbessent, args.inputs
 
 
 
 def main():
-    vcdfile, firrtlfile, tbv, tbcc, inputs_file = parse_args()
+    vcdfile, firrtlfile, tbv, tbcc, tbessent, inputs_file = parse_args()
     inputs, top = parse_firrtl(firrtlfile)
     if tbv is not None:
         make_verilog_testbench(tbv, top, inputs)
     if tbcc is not None:
         make_verilator_testbench(tbcc, top, inputs)
+    if tbessent is not None:
+        make_essent_testbench(tbessent, top, inputs)
     if inputs_file is not None:
         assert vcdfile is not None, f"Need to provide a VCD file to generate an inputs file!"
         vcdvcd.VCDVCD(vcdfile, callbacks=VCDParser([i[0] for i in inputs], top, inputs_file), store_tvs=False)

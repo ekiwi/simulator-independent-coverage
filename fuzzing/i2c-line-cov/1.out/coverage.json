@@ -121,4 +121,17 @@
 	{"filename": "id:000119,src:000084,op:havoc,rep:16,1637606688420", "creation_time": 816.542, "cumulative_coverage": 0.9938271604938271}, 
 	{"filename": "id:000120,src:000084+000056,op:splice,rep:8,1637606699888", "creation_time": 828.01, "cumulative_coverage": 0.9938271604938271}, 
 	{"filename": "id:000121,src:000087+000011,op:splice,rep:2,+cov,1637606702786", "creation_time": 830.908, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000122,src:000014+000094,op:splice,rep:4,1637606722694", "creation_time": 850.816, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000123,src:000075,op:havoc,rep:2,1637606741416", "creation_time": 869.538, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000124,src:000077,op:havoc,rep:64,1637606745318", "creation_time": 873.44, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000125,src:000077+000117,op:splice,rep:2,1637606750155", "creation_time": 878.277, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000126,src:000077+000099,op:splice,rep:4,1637606751113", "creation_time": 879.235, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000127,src:000116,op:havoc,rep:8,1637606844602", "creation_time": 972.724, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000128,src:000116,op:havoc,rep:2,1637606849078", "creation_time": 977.2, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000129,src:000116,op:havoc,rep:16,1637606856533", "creation_time": 984.655, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000130,src:000119,op:havoc,rep:2,1637606868798", "creation_time": 996.92, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000131,src:000119+000128,op:splice,rep:4,1637606883492", "creation_time": 1011.614, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000132,src:000121+000005,op:splice,rep:4,1637606916982", "creation_time": 1045.104, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000133,src:000048+000129,op:splice,rep:8,1637607031403", "creation_time": 1159.525, "cumulative_coverage": 1.0}
+], 
 "end_time": 1204.821}

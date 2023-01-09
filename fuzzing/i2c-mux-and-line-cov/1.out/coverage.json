@@ -197,4 +197,15 @@
 	{"filename": "id:000195,src:000190,op:havoc,rep:4,1637606635704", "creation_time": 790.334, "cumulative_coverage": 0.9938271604938271}, 
 	{"filename": "id:000196,src:000190,op:havoc,rep:64,1637606641928", "creation_time": 796.558, "cumulative_coverage": 0.9938271604938271}, 
 	{"filename": "id:000197,src:000194,op:havoc,rep:4,+cov,1637606674502", "creation_time": 829.132, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000198,src:000197+000173,op:splice,rep:2,1637606724497", "creation_time": 879.127, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000199,src:000027+000156,op:splice,rep:2,1637606850363", "creation_time": 1004.993, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000200,src:000071+000199,op:splice,rep:2,1637606863267", "creation_time": 1017.897, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000201,src:000104+000003,op:splice,rep:2,1637606880527", "creation_time": 1035.157, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000202,src:000118+000189,op:splice,rep:2,1637606915172", "creation_time": 1069.802, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000203,src:000146+000116,op:splice,rep:4,1637606965021", "creation_time": 1119.651, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000204,src:000070+000196,op:splice,rep:4,1637607016225", "creation_time": 1170.855, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000205,src:000085+000065,op:splice,rep:16,1637607029226", "creation_time": 1183.856, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000206,src:000098+000153,op:splice,rep:2,1637607036940", "creation_time": 1191.57, "cumulative_coverage": 1.0}, 
+	{"filename": "id:000207,src:000098+000153,op:splice,rep:4,1637607037008", "creation_time": 1191.638, "cumulative_coverage": 1.0}
+], 
 "end_time": 1204.98}

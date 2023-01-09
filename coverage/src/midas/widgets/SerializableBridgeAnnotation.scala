@@ -37,7 +37,7 @@ case class SerializableBridgeAnnotation[T <: AnyRef](
   widgetConstructorKey: Option[T])
   extends SingleTargetAnnotation[ModuleTarget] with HasSerializationHints {
 
-  def typeHints() = widgetConstructorKey match {
+  def typeHints = widgetConstructorKey match {
     // If the key has extra type hints too, grab them as well
     case Some(key: HasSerializationHints) => key.getClass +: key.typeHints
     case Some(key) => Seq(key.getClass)

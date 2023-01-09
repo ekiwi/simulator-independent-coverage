@@ -168,6 +168,7 @@ private class ModuleDomainScanner(clocks: Map[String, ModuleDomainScanner.Clock]
         // we treat the outputs of the submodule as inputs to our module
         case ir.Field(p, ir.Default, _) => inputs.append(name + "." + p)
         case ir.Field(p, ir.Flip, _) => outputs.append(name + "." + p)
+        case other => throw new NotImplementedError(s"Unexpected $other")
       }
     case _ =>
   }

@@ -6,9 +6,7 @@ import firrtl.options.Dependency
 import firrtl.stage.RunFirrtlTransformAnnotation
 import org.scalatest.flatspec.AnyFlatSpec
 import chiseltest._
-import chiseltest.experimental.TestOptionBuilder.ChiselScalatestOptionBuilder
 import chisel3._
-import chiseltest.internal.WriteVcdAnnotation
 
 
 class FsmCoverageTest extends AnyFlatSpec with ChiselScalatestTester {

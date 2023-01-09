@@ -8,9 +8,6 @@ jobs:
   test:
     name: sbt test
     runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        scala: [2.12.13, 2.13.5]
 
     steps:
       - name: Checkout
@@ -28,7 +25,7 @@ jobs:
       - name: Test
         run: |
           cd coverage
-          sbt ++${{ matrix.scala }} test
+          sbt test
 
   benchmarks:
     name: benchmarks

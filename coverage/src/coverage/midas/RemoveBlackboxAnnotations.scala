@@ -13,7 +13,6 @@ object RemoveBlackboxAnnotations extends Transform with DependencyAPIMigration {
 
   override def execute(state: CircuitState): CircuitState = {
     val annos = state.annotations.filterNot {
-      case _: BlackBoxResourceAnno => true
       case _: BlackBoxResourceFileNameAnno => true
       // the LogLevelAnnotation is als wreaking havoc with our Firesim setup!
       case _: LogLevelAnnotation => true

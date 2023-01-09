@@ -20,7 +20,7 @@ import scala.collection.mutable
 
 object AllEmitters {
   def apply(): Seq[TransformDependency] = Seq(
-    Dependency[LowFirrtlEmitter]
+    Dependency[LowFirrtlEmitter],
     Dependency[VerilogEmitter],
     Dependency[SystemVerilogEmitter],
     Dependency[MinimumVerilogEmitter]

@@ -18,7 +18,7 @@ with HasDontTouches {
   override def dontTouches = List(reset)
 
   override def duplicate(n: Seq[Seq[Target]]) = n match {
-    case Seq(t: Seq[ReferenceTarget], Seq(r: ReferenceTarget)) => copy(registers=t, reset=r)
+    case Seq(t: Seq[_], Seq(r: ReferenceTarget)) => copy(registers=t.map(_.asInstanceOf[ReferenceTarget]), reset=r)
     case other => throw new RuntimeException(s"Unexpected argument to duplicate: $other")
   }
 }

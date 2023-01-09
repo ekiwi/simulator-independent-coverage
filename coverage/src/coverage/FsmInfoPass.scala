@@ -173,6 +173,7 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
 
   private def toReferenceTarget(n: Named): ReferenceTarget = n match {
     case ComponentName(name, module) => module.toTarget.ref(name)
+    case other => throw new NotImplementedError(s"Unexpected $other")
   }
 }
 

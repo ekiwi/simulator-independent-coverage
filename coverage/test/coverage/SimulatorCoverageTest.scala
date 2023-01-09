@@ -4,10 +4,9 @@
 package coverage
 
 import circuits.Test1Module
-import chisel3.tester.experimental.TestOptionBuilder.ChiselScalatestOptionBuilder
 import chiseltest._
 import chiseltest.coverage._
-import chiseltest.internal.{BackendAnnotation, TreadleBackendAnnotation, VerilatorBackendAnnotation}
+import chiseltest.simulator.SimulatorAnnotation
 import firrtl.AnnotationSeq
 import logger.{LogLevel, LogLevelAnnotation}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -16,7 +15,7 @@ import chisel3._
 /** Ensure that all simulators give the same coverage feedback when run with the same tests.
   * To implement this for a particular simulator, just override the `backend` annotation.
   * */
-abstract class SimulatorCoverageTest(name: String, backend: BackendAnnotation) extends AnyFlatSpec with ChiselScalatestTester {
+abstract class SimulatorCoverageTest(name: String, backend: SimulatorAnnotation) extends AnyFlatSpec with ChiselScalatestTester {
   behavior of s"$name Coverage Collection"
   private def noAutoCov: AnnotationSeq = Seq(backend)
   private def allAutoCov: AnnotationSeq = Seq(backend) ++ LineCoverage.annotations
@@ -101,6 +100,6 @@ private class PiEstimator extends Module {
   val radius = 100
   inCircle := (x * x + y * y) <= (radius * radius).S
   inRectangle := (x <= radius.S && x >= -radius.S) && (y <= radius.S && y >= -radius.S)
-  chisel3.experimental.verification.cover(inCircle)
-  chisel3.experimental.verification.cover(inRectangle)
+  cover(inCircle)
+  cover(inRectangle)
 }

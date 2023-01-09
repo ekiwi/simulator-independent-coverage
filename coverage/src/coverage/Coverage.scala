@@ -18,7 +18,7 @@ import firrtl.stage.TransformManager.TransformDependency
 import scala.util.matching.Regex
 import scala.collection.mutable
 import java.nio.file._
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.io.Source
 
 /** Tags a module that should not have any coverage added.

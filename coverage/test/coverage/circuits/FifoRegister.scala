@@ -36,12 +36,12 @@ class FifoRegister(size: Int) extends Module {
   val dataReg = RegInit(0.U(size.W))
 
   when(stateReg === FifoState.Empty) {
-    when(io.enq.fire()) {
+    when(io.enq.fire) {
       stateReg := FifoState.Full
       dataReg := io.enq.bits
     }
   }.elsewhen(stateReg === FifoState.Full) {
-    when(io.deq.fire()) {
+    when(io.deq.fire) {
       stateReg := FifoState.Empty
       dataReg := 0.U // just to better see empty slots in the waveform
     }

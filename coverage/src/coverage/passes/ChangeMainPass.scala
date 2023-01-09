@@ -10,6 +10,7 @@ import firrtl.analyses.InstanceKeyGraph
 import firrtl.analyses.InstanceKeyGraph.InstanceKey
 import firrtl.annotations._
 import firrtl.options.Dependency
+import firrtl.renamemap.MutableRenameMap
 import firrtl.stage.Forms
 
 
@@ -51,7 +52,7 @@ object ChangeMainPass extends Transform with DependencyAPIMigration {
           val reducedCircuit = circuit.copy(modules = circuit.modules.filterNot(m => isUnreachable(m.name)))
 
           // rename all annotations
-          val rename = RenameMap()
+          val rename = MutableRenameMap()
           rename.rename(CircuitTarget(state.circuit.main), CircuitTarget(main.module))
           state.copy(circuit = reducedCircuit, renames = Some(rename))
         }

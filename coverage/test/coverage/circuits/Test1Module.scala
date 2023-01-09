@@ -21,7 +21,7 @@ class Test1Module(withSubmodules: Boolean = false) extends Module {
   }
 
   when(a === 0.U) {
-    chisel3.experimental.verification.cover(true.B, "user coverage")
+    cover(true.B, "user coverage")
   }
 
   when(a === 1.U) {
@@ -42,5 +42,5 @@ class Test1Module(withSubmodules: Boolean = false) extends Module {
 
 class SubModule1 extends Module {
   val a = IO(Input(UInt(3.W)))
-  chisel3.experimental.verification.cover(a > 4.U, "user coverage 2")
+  cover(a > 4.U, "user coverage 2")
 }

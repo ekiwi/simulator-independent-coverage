@@ -66,5 +66,5 @@ case class CompleteConfig(
   axi4Widths: NastiParameters,
   axi4Edge: Option[AXI4EdgeSummary] = None,
   memoryRegionName: Option[String] = None) extends HasSerializationHints {
-  def typeHints(): Seq[Class[_]] = Seq(userProvided.getClass)
+  def typeHints: Seq[Class[_]] = Seq(userProvided.getClass)
 }

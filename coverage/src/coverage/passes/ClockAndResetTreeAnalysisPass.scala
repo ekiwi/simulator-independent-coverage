@@ -222,6 +222,7 @@ object ClockAndResetTreeAnalysisPass extends Transform with DependencyAPIMigrati
         throw new RuntimeException(s"Failed to find instance $inst in $top for path $path.\nAvailable: " + instances.mkString(", "))
       ).module
       pathToTarget(childInstances, top.instOf(inst, module), tail)
+    case other => throw new NotImplementedError(s"Unexpected $other")
   }
   private def pathToModuleTarget(childInstances: Map[String, Seq[InstanceKey]], top: IsModule, path: List[String]): IsModule = path match {
     case Nil => top
@@ -426,7 +427,7 @@ private class ModuleTreeScanner {
           case other => throw new RuntimeException(s"unexpected pattern: $other (${other.serialize})")
         }
       case WireKind => onConnectSignal(loc.serialize, c.expr, c.info)
-      case _ => case other => throw new RuntimeException(s"Unexpected connect of kind: ${other} (${c.serialize})")
+      case other => throw new RuntimeException(s"Unexpected connect of kind: ${other} (${c.serialize})")
     }
   }
 

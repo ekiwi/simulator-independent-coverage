@@ -40,9 +40,9 @@ class CoverageScanChainTest extends AnyFlatSpec with CompilerTest {
     assert(l.contains(s"output cover_chain_out : UInt<$width>"))
 
     val expectedCovers = List(
-      "l_3", "l_0", "l_1", "l_2", "cover_0",
-      "c0.l_0", "c0.cover_0",
-      "c1.l_0", "c1.cover_0",
+      "l_3", "l_0", "l_1", "l_2", "user_cov",
+      "c0.l_0", "c0.user_cov_2",
+      "c1.l_0", "c1.user_cov_2",
     )
     assert(chainInfo.covers == expectedCovers)
   }

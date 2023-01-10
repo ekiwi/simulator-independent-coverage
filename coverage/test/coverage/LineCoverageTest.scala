@@ -89,7 +89,7 @@ class LineCoverageInstrumentationTest extends AnyFlatSpec with CompilerTest {
     assert(a.size == 4)
 
     // lines for each coverage point (relative to the "class Test1Module " line)
-    val offset = 6
+    val offset = 10
     val lines = Map(
       "l_3" -> Seq(5, 7, 11, 17, 21, 26, 27),
       "l_0" -> Seq(8),
@@ -122,7 +122,7 @@ class LineCoverageInstrumentationTest extends AnyFlatSpec with CompilerTest {
     assert(subAs.size == 1)
     assert(subAs.head.lines.size == 1)
     assert(subAs.head.lines.head._1 == "Test1Module.scala")
-    val offset = 6
+    val offset = 10
     assert(subAs.head.lines.head._2 == Seq(39).map(_ + offset))
   }
 

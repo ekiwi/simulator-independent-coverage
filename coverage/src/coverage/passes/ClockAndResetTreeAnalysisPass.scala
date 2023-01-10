@@ -427,7 +427,7 @@ private class ModuleTreeScanner {
           case other => throw new RuntimeException(s"unexpected pattern: $other (${other.serialize})")
         }
       case WireKind => onConnectSignal(loc.serialize, c.expr, c.info)
-      case other => throw new RuntimeException(s"Unexpected connect of kind: ${other} (${c.serialize})")
+      case _ => // ignore
     }
   }
 

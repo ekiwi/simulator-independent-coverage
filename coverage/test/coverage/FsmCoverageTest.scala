@@ -24,14 +24,15 @@ class FsmCoverageTest extends AnyFlatSpec with ChiselScalatestTester {
     assert(fsm.states.map(_._1) == List("Empty", "Full"))
     assert(fsm.transitions.map(_._1) == List("Empty" -> "Empty", "Empty" -> "Full", "Full" -> "Empty", "Full" -> "Full"))
 
-    val totalCycles = 16 // excludes single reset cycle in the beginning
+    val totalCycles = 15 // excludes single reset cycle in the beginning
     assert(fsm.states.map(_._2).sum == totalCycles, "We are in exactly one state each cycle!")
-    assert(fsm.transitions.map(_._2).sum == totalCycles, "We take exactly one transition every cycle")
+    assert(fsm.transitions.map(_._2).sum == totalCycles - 1,
+      "We take exactly one transition every cycle besides the first one")
 
     val t = fsm.transitions.toMap
-    assert(t("Empty" -> "Empty") == 7)
+    assert(t("Empty" -> "Empty") == 6)
     assert(t("Empty" -> "Full") == 4)
-    assert(t("Full" -> "Empty") == 4)
+    assert(t("Full" -> "Empty") == 3)
     assert(t("Full" -> "Full") == 1)
   }
 

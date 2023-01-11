@@ -7,21 +7,15 @@ on:
 jobs:
   test:
     name: sbt test
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Verilator
         run: |
           sudo apt-get install -y verilator
           verilator --version
-      - name: Setup Scala
-        uses: olafurpg/setup-scala@v10
-        with:
-          java-version: adopt@1.8
-      - name: Cache Scala
-        uses: coursier/cache-action@v5
       - name: Test
         run: |
           cd coverage
@@ -29,7 +23,7 @@ jobs:
 
   benchmarks:
     name: benchmarks
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         # 4.028: Ubuntu 20.04, Fedora 32
@@ -42,7 +36,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Verilator Build Dependencies
         run: sudo apt-get install -y git make autoconf g++ flex bison libfl2 libfl-dev
       - name: Cache Verilator ${{ matrix.version }}
@@ -65,12 +59,6 @@ jobs:
           cd verilator-${{ matrix.version }}
           sudo make install
           verilator --version
-      - name: Setup Scala
-        uses: olafurpg/setup-scala@v10
-        with:
-          java-version: adopt@1.8
-      - name: Cache Scala
-        uses: coursier/cache-action@v5
       - name: Compile Scala
         run: cd coverage && sbt assembly
       - name: Compile Firrtl Line Coverage

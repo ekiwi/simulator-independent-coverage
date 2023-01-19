@@ -2,7 +2,7 @@
 package midas.widgets
 
 import chisel3._
-import chisel3.experimental.AutoCloneType
+
 
 import scala.collection.immutable
 
@@ -29,9 +29,10 @@ object SerializationUtils {
     }
   }
 
-  class RegeneratedTargetIO(inputs: Seq[SerializableField], outputs: Seq[SerializableField]) extends Record with AutoCloneType {
+  class RegeneratedTargetIO(inputs: Seq[SerializableField], outputs: Seq[SerializableField]) extends Record {
     val inputPorts  = inputs.map(field => field.name -> Input(field.regenType))
     val outputPorts  = outputs.map(field => field.name -> Output(field.regenType))
     override val elements = immutable.ListMap((inputPorts ++ outputPorts):_*)
+    override def cloneType = new RegeneratedTargetIO(inputs, outputs).asInstanceOf[this.type]
   }
 }

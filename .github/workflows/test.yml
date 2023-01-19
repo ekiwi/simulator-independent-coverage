@@ -28,7 +28,7 @@ jobs:
 
   benchmarks:
     name: benchmarks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         # 4.028: Ubuntu 20.04, Fedora 32
@@ -36,8 +36,9 @@ jobs:
         # 4.034: Chipyard
         # 4.038: Ubuntu 20.10
         # 4.108: Fedora 34
-        # 4.200: latest (unsupported atm)
-        version: ["4.034"]
+        # 4.200: currently the latest version on brew (MacOS)
+        # 4.202: added "forcePerInstance" to support our coverage flow
+        version: ["4.202"]
 
     steps:
       - name: Checkout
@@ -45,7 +46,7 @@ jobs:
       - name: Install Verilator Build Dependencies
         run: sudo apt-get install -y git make autoconf g++ flex bison libfl2 libfl-dev
       - name: Cache Verilator ${{ matrix.version }}
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: cache-verilator
         with:
           path: verilator-${{ matrix.version }}

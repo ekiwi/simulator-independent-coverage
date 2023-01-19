@@ -6,9 +6,11 @@ on:
 
 jobs:
   test:
-    name: sbt test
-    runs-on: ubuntu-latest
-
+    name: sbt test on ubuntu
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        scala: [2.12.15, 2.13.6]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -19,11 +21,11 @@ jobs:
       - name: Test Coverage
         run: |
           cd coverage
-          sbt test
+          sbt ++${{ matrix.scala }} test
       - name: Test FireSim Coverage
         run: |
           cd firesim-coverage
-          sbt test
+          sbt ++${{ matrix.scala }} test
 
 
   benchmarks:

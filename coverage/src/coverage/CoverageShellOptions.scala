@@ -4,7 +4,7 @@
 
 package coverage
 
-import coverage.midas.{CoverageScanChainOptions, CoverageScanChainPass, RemoveBlackboxAnnotations, RemoveStatementNames}
+import coverage.midas.{CoverageScanChainOptions, CoverageScanChainPass, RemoveBlackboxAnnotations}
 import coverage.passes.{AddResetAssumptionPass, ChangeMainPass, MakeMainAnnotation, RandomStateInit}
 import firrtl.annotations.{CircuitTarget, ModuleTarget}
 import firrtl.options._
@@ -75,11 +75,6 @@ final class CoverageShellOptions extends RegisteredLibrary {
       toAnnotationSeq = a => Seq(RunFirrtlTransformAnnotation(Dependency(CoverageScanChainPass)),
                                  CoverageScanChainOptions(a.toInt, addBridge=true)),
       helpText = "replace all cover statements with hardware counters of <WIDTH> and a scan chain"
-    ),
-    new ShellOption[Unit](
-      longOption = "remove-statement-names",
-      toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(RemoveStatementNames))),
-      helpText = "ensures that the output can be parsed by a firrt 1.4 compiler which does not support named statements"
     ),
     new ShellOption[Unit](
       longOption = "remove-blackbox-annos",

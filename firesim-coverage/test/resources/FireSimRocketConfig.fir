@@ -1,0 +1,1 @@
+../../../benchmarks/chipyard/FireSim-FireSimRocketConfig-BaseF1Config.default/firesim.firesim.FireSim.FireSimRocketConfig.fir

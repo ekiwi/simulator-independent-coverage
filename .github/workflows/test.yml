@@ -16,10 +16,15 @@ jobs:
         run: |
           sudo apt-get install -y verilator
           verilator --version
-      - name: Test
+      - name: Test Coverage
         run: |
           cd coverage
           sbt test
+      - name: Test FireSim Coverage
+        run: |
+          cd firesim-coverage
+          sbt test
+
 
   benchmarks:
     name: benchmarks

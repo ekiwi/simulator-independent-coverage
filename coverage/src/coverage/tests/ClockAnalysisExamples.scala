@@ -1,4 +1,4 @@
-package coverage.passes
+package coverage.tests
 
 import firrtl.annotations.JsonProtocol
 import firrtl.{AnnotationSeq, FileUtils}
@@ -53,7 +53,6 @@ object ClockAnalysisExamples {
       |    io.out <= inverted @[main.scala 13:10]
       |
       |""".stripMargin
-
 
 
   val sameModuleDifferentNumberOfClocks =
@@ -349,19 +348,27 @@ object ClockAnalysisExamples {
       |""".stripMargin
 
   def asyncQueueSink: String = FileUtils.getTextResource("/AsyncQueueSink.fir")
+
   def iCache: String = FileUtils.getTextResource("/regress/ICache.fir")
+
   def rocket: String = FileUtils.getTextResource("/regress/RocketCore.fir")
+
   def firesimRocket: String = FileUtils.getTextResource("/FireSimRocketConfig.fir")
+
   def firesimRocketSingleClock: String = FileUtils.getTextResource("/FireSimRocketConfig.SingleClock.fir")
+
   def firesimRocketSingleClockAnnos: AnnotationSeq = {
     val str = FileUtils.getTextResource("/FireSimRocketConfig.SingleClock.anno.json")
     JsonProtocol.deserialize(str)
   }
+
   def firesimRocketSingleClockEnumOnlyAnnos: AnnotationSeq = {
     val str = FileUtils.getTextResource("/FireSimRocketConfig.SingleClock.EnumOnly.anno.json")
     JsonProtocol.deserialize(str)
   }
+
   def riscvMini: String = FileUtils.getTextResource("/RiscVMiniTileTester.fir")
+
   def riscvMiniAnnos: AnnotationSeq = {
     val str = FileUtils.getTextResource("/RiscVMiniTileTester.fsm.json")
     JsonProtocol.deserialize(str)

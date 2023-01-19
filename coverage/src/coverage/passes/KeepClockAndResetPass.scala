@@ -4,12 +4,12 @@
 
 package coverage.passes
 
-import coverage.midas.Builder
 import firrtl._
 import firrtl.annotations._
 import firrtl.options.Dependency
 import firrtl.stage.Forms
 import firrtl.transforms._
+import coverage.Builder
 
 case class KeepClockAndResetAnnotation(target: ReferenceTarget) extends
   SingleTargetAnnotation[ReferenceTarget] with HasDontTouches {

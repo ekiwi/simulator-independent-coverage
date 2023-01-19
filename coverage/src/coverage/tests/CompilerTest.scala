@@ -1,19 +1,18 @@
-// SPDX-License-Identifier: Apache-2.0
+package coverage.tests
 
-package coverage
-
-import chisel3.{Module, RawModule}
+import chisel3.RawModule
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chiseltest.ChiselScalatestTester
 import chiseltest.experimental.sanitizeFileName
-import firrtl.{AnnotationSeq, EmittedFirrtlCircuitAnnotation, EmittedFirrtlModuleAnnotation, EmittedVerilogCircuitAnnotation, EmittedVerilogModuleAnnotation}
 import firrtl.options.TargetDirAnnotation
+import firrtl.{AnnotationSeq, EmittedFirrtlCircuitAnnotation, EmittedFirrtlModuleAnnotation, EmittedVerilogCircuitAnnotation, EmittedVerilogModuleAnnotation}
 import org.scalatest.TestSuite
 
 import java.io.File
 
-/** Base trait for tests that need to compile a circuit and inspect the resulting firrtl / Verilog  */
-trait CompilerTest extends ChiselScalatestTester { this: TestSuite =>
+/** Base trait for tests that need to compile a circuit and inspect the resulting firrtl / Verilog */
+trait CompilerTest extends ChiselScalatestTester {
+  this: TestSuite =>
   protected def annos: AnnotationSeq = Seq()
 
   protected def compile[M <: RawModule](gen: => M, target: String, a: AnnotationSeq = List(), ll: String = "warn"): (String, AnnotationSeq) = {
@@ -26,7 +25,7 @@ trait CompilerTest extends ChiselScalatestTester { this: TestSuite =>
     val r = stage.execute(Array("-X", target, "-ll", ll), ChiselGeneratorAnnotation(() => gen) +: testRunDir +: a ++: annos)
     val src = r.collect {
       case EmittedFirrtlCircuitAnnotation(a) => a
-      case EmittedFirrtlModuleAnnotation(a)  => a
+      case EmittedFirrtlModuleAnnotation(a) => a
       case EmittedVerilogCircuitAnnotation(a) => a
       case EmittedVerilogModuleAnnotation(a) => a
     }.map(_.value).mkString("")

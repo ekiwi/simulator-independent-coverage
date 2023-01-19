@@ -1,27 +1,12 @@
 package coverage.midas
 
 import coverage._
-import coverage.passes.{ClockAnalysisExamples, LeanTransformSpec}
+import coverage.tests.{ClockAnalysisExamples, LeanTransformSpec}
 import firrtl.annotations.CircuitTarget
 import firrtl.options.Dependency
 import firrtl.transforms.{NoCircuitDedupAnnotation, NoDedupAnnotation}
 import logger.{LogLevel, LogLevelAnnotation, Logger}
 
-
-class SingleClockCoverageScanChainTest extends LeanTransformSpec(Seq(Dependency(LineCoveragePass), Dependency(CoverageStatisticsPass), Dependency(CoverageScanChainPass))) {
-  behavior of "LineCoverage + CoverageScanChain"
-
-  it should "instrument a single clock FireSim design" in {
-    val m = CircuitTarget("FireSim").module("FireSim")
-    val ll = LogLevel.Warn
-    val opts = CoverageScanChainOptions()
-    val state = Logger.makeScope(Seq(LogLevelAnnotation(ll))) {
-      compile(ClockAnalysisExamples.firesimRocketSingleClock, Seq(opts))
-    }
-
-    val covers = state.annotations.collect{ case c : CoverageScanChainInfo => c.covers }.head
-  }
-}
 
 
 class SingleClockLineCoverageTest extends LeanTransformSpec(Seq(Dependency(LineCoveragePass), Dependency(CoverageStatisticsPass))) {
@@ -91,24 +76,3 @@ class SingleClockReadyValidCoverageTest extends LeanTransformSpec(Seq(Dependency
   }
 }
 
-
-class SingleClockRemoveCoverageTest extends LeanTransformSpec(Seq(Dependency(LineCoveragePass), Dependency(CoverageStatisticsPass), Dependency(RemoveCoverPointsPass), Dependency(FindCoversToRemovePass), Dependency(CoverageScanChainPass))) {
-  behavior of "LineCoverage with reduced cover points"
-
-  it should "remove already covered cover points from a a single clock FireSim design" in {
-    val ll = LogLevel.Warn
-    val loadCov = LoadCoverageAnnotation("test/resources/chipyard.merged.cover.json")
-    // needed in order to be compatible with the firesim build
-    val noDedup = NoCircuitDedupAnnotation
-    val state = Logger.makeScope(Seq(LogLevelAnnotation(ll))) {
-      compile(ClockAnalysisExamples.firesimRocketSingleClock, noDedup +: loadCov +: ClockAnalysisExamples.firesimRocketSingleClockEnumOnlyAnnos)
-    }
-
-    val removed = state.annotations.collectFirst{ case RemoveCoverAnnotation(removed) => removed }.get
-    assert(removed.length == 1999)
-
-    val lines = state.circuit.serialize.split('\n').map(_.trim)
-    val coverCount = lines.count(_.contains("cover("))
-    assert(coverCount == 3691 - removed.length)
-  }
-}

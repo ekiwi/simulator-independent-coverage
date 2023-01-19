@@ -1,6 +1,7 @@
 package coverage
 
 import coverage.circuits.FifoRegister
+import coverage.tests.CompilerTest
 import firrtl.AnnotationSeq
 import firrtl.options.Dependency
 import firrtl.stage.RunFirrtlTransformAnnotation

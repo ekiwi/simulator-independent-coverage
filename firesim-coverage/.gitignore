@@ -1,0 +1,11 @@
+# Scala
+/target/
+/project/project/
+/project/target/
+/.bsp
+
+# Intellij Idea
+/.idea/
+
+# chisel testers
+/test_run_dir/

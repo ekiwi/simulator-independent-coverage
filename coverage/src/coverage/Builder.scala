@@ -2,7 +2,7 @@
 // released under BSD 3-Clause License
 // author: Kevin Laeufer <laeufer@cs.berkeley.edu>
 
-package coverage.midas
+package coverage
 
 import firrtl._
 import firrtl.annotations.{IsModule, ReferenceTarget}

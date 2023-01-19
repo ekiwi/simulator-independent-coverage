@@ -5,7 +5,6 @@
 package coverage
 
 import chiseltest.coverage.CoverageInfo
-import coverage.midas.Builder
 import coverage.passes.{AliasAnalysis, KeepClockAndResetPass, RemoveKeepClockAndResetAnnotations}
 import firrtl.annotations.{Annotation, CircuitTarget, MakePresetRegAnnotation, ModuleTarget, NoTargetAnnotation, ReferenceTarget, SingleTargetAnnotation}
 import firrtl._

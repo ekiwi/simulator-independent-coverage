@@ -1,5 +1,6 @@
 package coverage.passes
 
+import coverage.tests.{ClockAnalysisExamples, LeanTransformSpec}
 import firrtl.annotations.CircuitTarget
 import firrtl.options.Dependency
 import logger._

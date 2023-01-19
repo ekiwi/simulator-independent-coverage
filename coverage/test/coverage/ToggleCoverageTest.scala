@@ -5,6 +5,7 @@
 package coverage
 
 import circuits.Test1Module
+import coverage.tests.CompilerTest
 import chisel3._
 import chiseltest._
 import chisel3.experimental.ExtModule

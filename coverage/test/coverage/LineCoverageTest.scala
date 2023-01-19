@@ -3,6 +3,7 @@
 package coverage
 
 import circuits.Test1Module
+import coverage.tests.CompilerTest
 import firrtl.options.Dependency
 import org.scalatest.flatspec.AnyFlatSpec
 import chisel3._

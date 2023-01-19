@@ -4,7 +4,6 @@
 
 package coverage
 
-import coverage.midas.{CoverageScanChainOptions, CoverageScanChainPass, RemoveBlackboxAnnotations}
 import coverage.passes.{AddResetAssumptionPass, ChangeMainPass, MakeMainAnnotation, RandomStateInit}
 import firrtl.annotations.{CircuitTarget, ModuleTarget}
 import firrtl.options._
@@ -64,22 +63,6 @@ final class CoverageShellOptions extends RegisteredLibrary {
       longOption = "emit-cover-info",
       toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(CoverageInfoEmitter))),
       helpText = "write coverage information to a .cover.json file"
-    ),
-    new ShellOption[Unit](
-      longOption = "cover-scan-chain",
-      toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(CoverageScanChainPass))),
-      helpText = "schedules the cover scan chain pass to run, needs a CoverageScanChainOptions annotation for the pass to have any effect"
-    ),
-    new ShellOption[String](
-      longOption = "cover-scan-chain-width",
-      toAnnotationSeq = a => Seq(RunFirrtlTransformAnnotation(Dependency(CoverageScanChainPass)),
-                                 CoverageScanChainOptions(a.toInt, addBridge=true)),
-      helpText = "replace all cover statements with hardware counters of <WIDTH> and a scan chain"
-    ),
-    new ShellOption[Unit](
-      longOption = "remove-blackbox-annos",
-      toAnnotationSeq = _ => Seq(RunFirrtlTransformAnnotation(Dependency(RemoveBlackboxAnnotations))),
-      helpText = "removes all Blackbox resource annotations"
     ),
     new ShellOption[Unit](
       longOption = "random-state-init",

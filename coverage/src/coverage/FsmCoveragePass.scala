@@ -5,7 +5,6 @@
 package coverage
 
 import chiseltest.coverage.CoverageInfo
-import coverage.midas.Builder
 import coverage.passes.{RegisterResetAnnotation, RegisterResetAnnotationPass}
 import firrtl.annotations._
 import firrtl._

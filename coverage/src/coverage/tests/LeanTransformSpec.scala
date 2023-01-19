@@ -2,12 +2,12 @@
 
 // copied from firrtl testutils
 
-package coverage.passes
+package coverage.tests
 
-import firrtl.{ir, AnnotationSeq, CircuitState, EmitCircuitAnnotation}
 import firrtl.options.Dependency
 import firrtl.passes.RemoveEmpty
 import firrtl.stage.TransformManager.TransformDependency
+import firrtl.{AnnotationSeq, CircuitState, EmitCircuitAnnotation, ir}
 import logger.LazyLogging
 import org.scalatest.flatspec.AnyFlatSpec
 

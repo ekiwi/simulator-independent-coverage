@@ -165,7 +165,7 @@ object AliasAnalysis {
     case Some(a) => name +: getAliases(a, cons)
   }
 
-  import coverage.midas.Builder.getKind
+  import coverage.Builder.getKind
   private def onStmt(s: ir.Statement, cons: Connects): Unit = s match {
     case ir.DefNode(_, lhs, rhs: ir.RefLikeExpression) =>
       cons(lhs) = rhs.serialize

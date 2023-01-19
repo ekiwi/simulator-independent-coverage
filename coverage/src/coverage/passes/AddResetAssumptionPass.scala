@@ -5,8 +5,7 @@
 package coverage.passes
 
 
-import coverage.{AllEmitters, Coverage}
-import coverage.midas.Builder
+import coverage.{AllEmitters, Coverage, Builder}
 import firrtl._
 import firrtl.annotations._
 import firrtl.options.Dependency

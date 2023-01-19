@@ -4,18 +4,17 @@
 
 package coverage.midas
 
-import coverage.{Coverage, LineCoveragePass}
+import coverage.Coverage
 import firrtl._
 import firrtl.analyses.InstanceKeyGraph.InstanceKey
 import firrtl.annotations._
-import firrtl.ir.DefNode
 import firrtl.options.Dependency
 import firrtl.passes.ResolveFlows
 import firrtl.passes.wiring.WiringTransform
 import firrtl.stage.Forms
 import firrtl.stage.TransformManager.TransformDependency
 import firrtl.transforms.{EnsureNamedStatements, PropagatePresetAnnotations}
-import midas.passes.fame.{FAMEChannelConnectionAnnotation, FAMEChannelInfo, PipeChannel}
+import midas.passes.fame.{FAMEChannelConnectionAnnotation, PipeChannel}
 import midas.widgets.SerializableBridgeAnnotation
 
 import scala.collection.mutable

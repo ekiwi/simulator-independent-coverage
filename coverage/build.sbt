@@ -1,6 +1,6 @@
 name := "coverage"
 version := "0.5.3"
-scalaVersion := "2.13.6"
+scalaVersion := "2.12.15"
 crossScalaVersions := Seq("2.13.6", "2.12.15")
 
 scalacOptions := Seq("-deprecation", "-unchecked", "-language:reflectiveCalls")

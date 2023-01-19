@@ -3,13 +3,12 @@
 package coverage
 
 import org.scalatest.flatspec.AnyFlatSpec
-import java.nio.file._
 
 class CodeBaseTest extends AnyFlatSpec {
   behavior of "CodeBase"
 
   it should "read in a code base" in {
-    val c = new CodeBase(Paths.get("test"))
+    val c = new CodeBase(os.pwd / "test")
 
     // TODO: test warn about duplicates
     //c.warnAboutDuplicates()
@@ -18,6 +17,6 @@ class CodeBaseTest extends AnyFlatSpec {
     assert(!c.isDuplicate("CodeBaseTest.scala"))
 
     // get this line
-    assert(c.getLine("CodeBaseTest.scala", 20).get.trim == "// get this line")
+    assert(c.getLine("CodeBaseTest.scala", 19).get.trim == "// get this line")
   }
 }

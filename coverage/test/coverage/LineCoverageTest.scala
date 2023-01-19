@@ -12,8 +12,6 @@ import firrtl.AnnotationSeq
 import firrtl.annotations.CircuitTarget
 import firrtl.stage.RunFirrtlTransformAnnotation
 
-import java.nio.file.Paths
-
 class LineCoverageTest extends AnyFlatSpec with ChiselScalatestTester {
   it should "parse the results from the simulator" in {
     val r = runTest()
@@ -40,7 +38,7 @@ class LineCoverageTest extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "generate a textual report" in {
     val data = LineCoverage.processCoverage(runTest())
-    val code = new CodeBase(Paths.get("test"))
+    val code = new CodeBase(os.pwd / "test")
     val report = LineCoverage.textReport(code, data.files.head).toVector
     val lines = report.map(_.trim)
 

@@ -17,9 +17,6 @@ import firrtl.stage.TransformManager.TransformDependency
 
 import scala.util.matching.Regex
 import scala.collection.mutable
-import java.nio.file._
-import scala.jdk.CollectionConverters._
-import scala.io.Source
 
 /** Tags a module that should not have any coverage added.
  *  This annotation should be respected by all automated coverage passes.
@@ -84,9 +81,9 @@ object Coverage {
 }
 
 /** Represents a Scala code base. */
-class CodeBase(root: Path) extends LazyLogging {
-  require(Files.exists(root), s"Could not find root directory: $root")
-  require(Files.isDirectory(root), s"Is not a directory: $root")
+class CodeBase(root: os.Path) extends LazyLogging {
+  require(os.exists(root), s"Could not find root directory: $root")
+  require(os.isDir(root), s"Is not a directory: $root")
 
   val index = CodeBase.index(root)
   private val duplicates = index.filter(_._2.size > 1)
@@ -105,7 +102,7 @@ class CodeBase(root: Path) extends LazyLogging {
 
   val duplicateKeys: List[String] = duplicates.keys.toList
   def isDuplicate(key:  String): Boolean = getDuplicate(key).isDefined
-  def getDuplicate(key: String): Option[List[Path]] = duplicates.get(key)
+  def getDuplicate(key: String): Option[List[os.RelPath]] = duplicates.get(key)
 
   /** returns None if the key is not unique */
   def getLine(key: String, line: Int): Option[String] = {
@@ -113,13 +110,13 @@ class CodeBase(root: Path) extends LazyLogging {
     getSource(key).map(_(line - 1))
   }
 
-  private val sourceCache = mutable.HashMap[Path, Vector[String]]()
-  def getSource(key: String): Option[Vector[String]] = getFilePath(key).map { rel =>
-    sourceCache.getOrElseUpdate(rel, CodeBase.getLines(root, rel))
+  private val sourceCache = mutable.HashMap[os.RelPath, IndexedSeq[String]]()
+  def getSource(key: String): Option[IndexedSeq[String]] = getFilePath(key).map { rel =>
+    sourceCache.getOrElseUpdate(rel, os.read.lines(root / rel))
   }
 
   /** returns None if the key is not unique */
-  private def getFilePath(key: String): Option[Path] = index.get(key) match {
+  private def getFilePath(key: String): Option[os.RelPath] = index.get(key) match {
     case Some(List(one)) => Some(one)
     case _               => None
   }
@@ -127,36 +124,24 @@ class CodeBase(root: Path) extends LazyLogging {
 }
 
 object CodeBase {
-  private def getLines(root: Path, rel: Path): Vector[String] = {
-    val filename = root.resolve(rel)
-    val src = Source.fromFile(filename.toString)
-    val lines = src.getLines().toVector
-    src.close()
-    lines
-  }
 
   /** finds all source files in the path and maps them by their filename */
-  private def index(root: Path, exts: Set[String] = Set("scala")): Map[String, List[Path]] = {
-    val i = mutable.HashMap[String, List[Path]]()
+  private def index(root: os.Path, exts: Set[String] = Set("scala")): Map[String, List[os.RelPath]] = {
+    val i = mutable.HashMap[String, List[os.RelPath]]()
     index(root, root, exts, i)
     i.toMap
   }
 
-  private def index(root: Path, dir: Path, exts: Set[String], i: mutable.HashMap[String, List[Path]]): Unit = {
-    val stream = Files.newDirectoryStream(dir)
-    stream.iterator.asScala.foreach { f: Path =>
-      val ext = f.toString.split('.').last.toLowerCase
-      if (exts.contains(ext)) {
-        val key = f.getFileName.toString
+  private def index(root: os.Path, dir: os.Path, exts: Set[String], i: mutable.HashMap[String, List[os.RelPath]]): Unit = {
+    val stream = os.walk.stream(dir)
+    stream.foreach { f: os.Path =>
+      if (exts.contains(f.ext)) {
+        val key = f.last
         val old = i.getOrElse(key, List())
-        val relative = root.relativize(f)
+        val relative = f.relativeTo(root)
         i(key) = relative +: old
       }
-      if (Files.isDirectory(f)) {
-        index(root, f, exts, i)
-      }
     }
-    stream.close()
   }
 }
 

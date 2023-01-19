@@ -50,3 +50,45 @@ cat ../../../generators/rocket-chip/src/main/resources/vsrc/plusarg_reader.v >> 
 11. test on the asm tests: make run-asm-tests
 
 Afterwards you should be able to find coverage data as a JSON file in the output folder.
+
+
+## David's Repos
+
+Chipyard: https://github.com/ucb-bar/chipyard/commits/firesim-coverage
+- changed submodules + added new configurations
+
+
+## Changes
+
+### FireSim
+
+[Comparison on Github](https://github.com/ekiwi/firesim/compare/ekiwi:firesim:coverage-base...coverage)
+
+- add `sim/midas/src/main/scala/coverage/midas/CoverageBridge.scala`
+- add `sim/midas/src/main/cc/bridges/coverage.cc`
+- add `sim/midas/src/main/cc/bridges/coverage.h`
+- change `sim/src/main/cc/firesim/firesim_top.cc` to create coverage bridge and
+  add signals between serial and coverage bridge
+- change `sim/firesim-lib/src/main/cc/bridges/serial.cc` and
+  `sim/firesim-lib/src/main/cc/bridges/serial.h` to coordinate with coverage bridge
+- change `sim/src/main/makefrag/firesim/Makefrag` to add `+cover-json` argument
+
+
+In the new version of FireSim, `sim/src/main/makefrag/firesim/Makefrag`
+was moved to `sim/scripts/main/makefrag/firesim/Makefrag`
+
+
+[New DMA implementation](https://github.com/firesim/firesim/commit/0f5d83e37682bb664a797157ce7e00c237868f78#diff-389c41dc81ff01dda937080b6f22d2b5f6c555659b803427010757f10f10c209)
+
+The [RemovePlusArgReader pass](https://github.com/firesim/firesim/commit/710e617ba41964baa2cfa9c64cec3ebf9bb87e04)
+was removed without replacement.
+
+## FireSim Flow
+
+1. Setup AWS as described in: https://docs.fires.im/en/latest/Initial-Setup/index.html
+
+Clone [ekiwi fork](https://github.com/ekiwi/firesim) and switch to `coverage-asplos2023` branch.
+
+2. Build Linux: https://docs.fires.im/en/latest/Running-Simulations-Tutorial/Running-a-Single-Node-Simulation.html#building-target-software
+
+

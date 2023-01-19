@@ -61,7 +61,7 @@ class SingleClockFsmCoverageTest extends LeanTransformSpec(Seq(Dependency(FsmCov
     val m = CircuitTarget("FireSim").module("FireSim")
     val ll = LogLevel.Warn
     val state = Logger.makeScope(Seq(LogLevelAnnotation(ll))) {
-      compile(ClockAnalysisExamples.firesimRocketSingleClock, ClockAnalysisExamples.firesimRocketSingleClockAnnos)
+      compile(ClockAnalysisExamples.firesimRocketSingleClock, ClockAnalysisExamples.firesimRocketSingleClockEnumOnlyAnnos)
     }
   }
 
@@ -79,7 +79,7 @@ class SingleClockReadyValidCoverageTest extends LeanTransformSpec(Seq(Dependency
   it should "instrument a single clock FireSim design" in {
     val ll = LogLevel.Warn
     val state = Logger.makeScope(Seq(LogLevelAnnotation(ll))) {
-      compile(ClockAnalysisExamples.firesimRocketSingleClock, ClockAnalysisExamples.firesimRocketSingleClockAnnos)
+      compile(ClockAnalysisExamples.firesimRocketSingleClock, ClockAnalysisExamples.firesimRocketSingleClockEnumOnlyAnnos)
     }
   }
 
@@ -101,7 +101,7 @@ class SingleClockRemoveCoverageTest extends LeanTransformSpec(Seq(Dependency(Lin
     // needed in order to be compatible with the firesim build
     val noDedup = NoCircuitDedupAnnotation
     val state = Logger.makeScope(Seq(LogLevelAnnotation(ll))) {
-      compile(ClockAnalysisExamples.firesimRocketSingleClock, noDedup +: loadCov +: ClockAnalysisExamples.firesimRocketSingleClockAnnos)
+      compile(ClockAnalysisExamples.firesimRocketSingleClock, noDedup +: loadCov +: ClockAnalysisExamples.firesimRocketSingleClockEnumOnlyAnnos)
     }
 
     val removed = state.annotations.collectFirst{ case RemoveCoverAnnotation(removed) => removed }.get

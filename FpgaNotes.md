@@ -83,6 +83,31 @@ was moved to `sim/scripts/main/makefrag/firesim/Makefrag`
 The [RemovePlusArgReader pass](https://github.com/firesim/firesim/commit/710e617ba41964baa2cfa9c64cec3ebf9bb87e04)
 was removed without replacement.
 
+
+Instrumentation call for FireSim:
+
+```
+/home/centos/firesim/target-design/chipyard/tools/coverage/coverage//utils/bin/firrtl \
+--remove-blackbox-annos \
+--remove-statement-names \
+--emit-cover-info \
+--cover-scan-chain 16 \
+--line-coverage \
+-ll info \
+-i /home/centos/firesim/sim/generated-src/f1/FireSim-FireSimRocketConfig-BaseF1Config/firesim.firesim.FireSim.FireSimRocketConfig.fir \
+-faf /home/centos/firesim/sim/generated-src/f1/FireSim-FireSimRocketConfig-BaseF1Config/firesim.firesim.FireSim.FireSimRocketConfig.anno.json \
+-E low \
+--no-dedup \
+-foaf /home/centos/firesim/sim/generated-src/f1/FireSim-FireSimRocketConfig-BaseF1Config/firesim.firesim.FireSim.FireSimRocketConfig.instrumented.anno.json \
+-o /home/centos/firesim/sim/generated-src/f1/FireSim-FireSimRocketConfig-BaseF1Config/firesim.firesim.FireSim.FireSimRocketConfig.instrumented.fir.lo.fir
+```
+
+Reproduce in local `sbt` shell:
+
+```
+runMain firrtl.stage.FirrtlMain --remove-blackbox-annos --emit-cover-info --cover-scan-chain 16 --line-coverage -ll info -i ../benchmarks/chipyard/FireSim-FireSimRocketConfig-BaseF1Config_NEW_1.15.1/firesim.firesim.FireSim.FireSimRocketConfig.fir -faf ../benchmarks/chipyard/FireSim-FireSimRocketConfig-BaseF1Config_NEW_1.15.1/firesim.firesim.FireSim.FireSimRocketConfig.anno.json -E low --no-dedup
+```
+
 ## FireSim Flow
 
 1. Setup AWS as described in: https://docs.fires.im/en/latest/Initial-Setup/index.html

@@ -4,7 +4,7 @@
 
 package coverage.midas
 
-import coverage.{Coverage, Builder}
+import coverage.{Builder, Coverage}
 import firrtl._
 import firrtl.analyses.InstanceKeyGraph.InstanceKey
 import firrtl.annotations._
@@ -15,7 +15,7 @@ import firrtl.stage.Forms
 import firrtl.stage.TransformManager.TransformDependency
 import firrtl.transforms.{EnsureNamedStatements, PropagatePresetAnnotations}
 import midas.passes.fame.{FAMEChannelConnectionAnnotation, PipeChannel}
-import midas.widgets.SerializableBridgeAnnotation
+import midas.widgets.BridgeIOAnnotation
 
 import scala.collection.mutable
 
@@ -118,7 +118,7 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     val moduleName = "CoverageBridge"
     val m = c.module(moduleName)
     val key = CoverageBridgeKey(counterWidth, covers)
-    val bridgeAnno = SerializableBridgeAnnotation(m, List(BridgeEnPort, BridgeOutPort), BridgeWidgetClass, Some(key))
+    val bridgeAnno = BridgeIOAnnotation(m.ref(BridgeEnPort), Seq(BridgeEnPort, BridgeOutPort), BridgeWidgetClass, Some(key))
     val pipeChannel = PipeChannel(1)
     val enChannel = FAMEChannelConnectionAnnotation(BridgeEnPort, pipeChannel, Some(m.ref("clock")),
       sinks= Some(List(m.ref(BridgeEnPort))), sources =None)

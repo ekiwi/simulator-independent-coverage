@@ -85,6 +85,10 @@ jobs:
         run: time ./benchmarks/riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_toggle_firrtl
       - name: Run Verilator Toggle Coverage
         run: time ./benchmarks/riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_toggle_native
+      - name: Compile Firrtl Line Coverage (Neuromorphic Processor)
+        run: cd benchmarks && make LL=info NeuromorphicProcessor/NeuromorphicProcessor_line_firrtl
+      - name: Run Firrtl Line Coverage (Neuromorphic Processor)
+        run: time ./benchmarks/NeuromorphicProcessor/NeuromorphicProcessor_line_firrtl
 
   # Sentinel job to simplify how we specify which checks need to pass in branch
   # protection and in Mergify

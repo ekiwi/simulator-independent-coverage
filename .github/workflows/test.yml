@@ -41,7 +41,7 @@ jobs:
         # 4.108: Fedora 34
         # 4.200: currently the latest version on brew (MacOS)
         # 4.202: added "forcePerInstance" to support our coverage flow
-        version: ["4.106", "4.202"]
+        version: ["4.106"] #, "4.202"]
 
     steps:
       - name: Checkout

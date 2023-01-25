@@ -43,7 +43,12 @@ $(BUILD_DIR)/NeuromorphicProcessor.cc: NeuromorphicProcessor/testbench.cc $(BUIL
 	cp $< $@
 
 # build executable simulation of instrumented files with verilator
-$(BUILD_DIR)/NeuromorphicProcessor_%.bin: $(BUILD_DIR)/NeuromorphicProcessor_%.sv $(BUILD_DIR)/NeuromorphicProcessor.cc
+$(BUILD_DIR)/NeuromorphicProcessor_baseline.bin: $(BUILD_DIR)/NeuromorphicProcessor_baseline.sv $(BUILD_DIR)/NeuromorphicProcessor.cc
+	cd $(BUILD_DIR) && \
+	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../NeuromorphicProcessor --top-module NeuromorphicProcessor
+	rm -f $@ && ln -s $(notdir $(basename $@))/VNeuromorphicProcessor $@
+
+$(BUILD_DIR)/NeuromorphicProcessor_firrtl_%.bin: $(BUILD_DIR)/NeuromorphicProcessor_firrtl_%.sv $(BUILD_DIR)/NeuromorphicProcessor.cc
 	cd $(BUILD_DIR) && \
 	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../NeuromorphicProcessor --top-module NeuromorphicProcessor
 	rm -f $@ && ln -s $(notdir $(basename $@))/VNeuromorphicProcessor $@
@@ -76,7 +81,7 @@ HYPERFINE := $(shell command -v hyperfine 2> /dev/null)
 BENCH_OPTS = baseline firrtl_line native_line firrtl_toggle native_toggle firrtl_all
 
 
-$(BUILD_DIR)/NeuromorphicProcessor_results.csv: $(addsuffix .bin, $(addprefix $(BUILD_DIR)/NeuromorphicProcessor_, $(BENCH_OPTS))) $(BUILD_DIR)/NeuromorphicProcessor_inputs.txt
+$(BUILD_DIR)/%_results.csv: $(addsuffix .bin, $(addprefix $(BUILD_DIR)/%_, $(BENCH_OPTS))) $(BUILD_DIR)/%_inputs.txt
 ifndef HYPERFINE
 	$(error "install hyperfine: https://github.com/sharkdp/hyperfine")
 endif

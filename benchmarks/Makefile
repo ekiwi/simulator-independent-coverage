@@ -7,7 +7,8 @@ $(firrtl_jar): $(firrtl_srcs)
 	cd ../coverage && sbt assembly
 firrtl: $(firrtl_jar)
 
-VERILATOR = verilator -Wno-WIDTH --cc --exe --build
+# user coverage is awlays enabled since the baseline has no user cover points and the firrtl instrumentation adds user cover points
+VERILATOR = verilator -Wno-WIDTH --coverage-user --cc --exe --build
 
 ALL_COV = --line-coverage --toggle-coverage --fsm-coverage --ready-valid-coverage --emit-cover-info
 LINE_COV = --line-coverage --emit-cover-info
@@ -28,13 +29,13 @@ clean:
 $(BUILD_DIR)/NeuromorphicProcessor_baseline.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog -o $@
 
-$(BUILD_DIR)/NeuromorphicProcessor_line.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
+$(BUILD_DIR)/NeuromorphicProcessor_firrtl_line.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(LINE_COV) -o $@
 
-$(BUILD_DIR)/NeuromorphicProcessor_toggle.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
+$(BUILD_DIR)/NeuromorphicProcessor_firrtl_toggle.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(TOGGLE_COV) -o $@
 
-$(BUILD_DIR)/NeuromorphicProcessor_all.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
+$(BUILD_DIR)/NeuromorphicProcessor_firrtl_all.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(ALL_COV) -o $@
 
 # copy over testbench file (somehow verilator has trouble with input files in different directories)
@@ -45,28 +46,43 @@ $(BUILD_DIR)/NeuromorphicProcessor.cc: NeuromorphicProcessor/testbench.cc
 $(BUILD_DIR)/NeuromorphicProcessor_%.bin: $(BUILD_DIR)/NeuromorphicProcessor_%.sv $(BUILD_DIR)/NeuromorphicProcessor.cc
 	cd $(BUILD_DIR) && \
 	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../NeuromorphicProcessor --top-module NeuromorphicProcessor
-	ln -s $(notdir $(basename $@))/VNeuromorphicProcessor $@
+	rm -f $@ && ln -s $(notdir $(basename $@))/VNeuromorphicProcessor $@
 
 # build the baseline Verilog with native verilator instrumentation for comparison
 $(BUILD_DIR)/NeuromorphicProcessor_native_line.bin: $(BUILD_DIR)/NeuromorphicProcessor_baseline.sv $(BUILD_DIR)/NeuromorphicProcessor.cc
 	cd $(BUILD_DIR) && \
 	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../NeuromorphicProcessor --top-module NeuromorphicProcessor --coverage-line
-	ln -s $(notdir $(basename $@))/VNeuromorphicProcessor $@
+	rm -f $@ && ln -s $(notdir $(basename $@))/VNeuromorphicProcessor $@
 
 $(BUILD_DIR)/NeuromorphicProcessor_native_toggle.bin: $(BUILD_DIR)/NeuromorphicProcessor_baseline.sv $(BUILD_DIR)/NeuromorphicProcessor.cc
 	cd $(BUILD_DIR) && \
 	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../NeuromorphicProcessor --top-module NeuromorphicProcessor --coverage-toggle
-	ln -s $(notdir $(basename $@))/VNeuromorphicProcessor $@
+	rm -f $@ && ln -s $(notdir $(basename $@))/VNeuromorphicProcessor $@
 
 $(BUILD_DIR)/NeuromorphicProcessor_native_all.bin: $(BUILD_DIR)/NeuromorphicProcessor_baseline.sv $(BUILD_DIR)/NeuromorphicProcessor.cc
 	cd $(BUILD_DIR) && \
 	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../NeuromorphicProcessor --top-module NeuromorphicProcessor --coverage-line --coverage-toggle
-	ln -s $(notdir $(basename $@))/VNeuromorphicProcessor $@
+	rm -f $@ && ln -s $(notdir $(basename $@))/VNeuromorphicProcessor $@
 
 # extract inputs for benchmarking
 $(BUILD_DIR)/NeuromorphicProcessor_inputs.txt: NeuromorphicProcessor/inputs.txt.gz
 	gzip -dk $<
 	mv NeuromorphicProcessor/inputs.txt $@
+
+############ Benchmarking with Hyperfine
+# # https://stackoverflow.com/questions/5618615/check-if-a-program-exists-from-a-makefile
+HYPERFINE := $(shell command -v hyperfine 2> /dev/null)
+
+BENCH_OPTS = baseline firrtl_line native_line firrtl_toggle native_toggle firrtl_all
+
+
+$(BUILD_DIR)/NeuromorphicProcessor_results.csv: $(addsuffix .bin, $(addprefix $(BUILD_DIR)/NeuromorphicProcessor_, $(BENCH_OPTS))) $(BUILD_DIR)/NeuromorphicProcessor_inputs.txt
+ifndef HYPERFINE
+	$(error "install hyperfine: https://github.com/sharkdp/hyperfine")
+endif
+	cd $(BUILD_DIR) && \
+	hyperfine --warmup 1 --max-runs 100 --export-csv $(notdir $@) $(addprefix ./, $(filter %.bin, $(notdir $^)))
+
 
 
 

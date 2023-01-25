@@ -41,7 +41,7 @@ top->reset = reset;
 top->io_uartRx = io_uartRx;
 
     // load data from file
-    FILE* pFile = fopen("inputs.txt", "r");
+    FILE* pFile = fopen("NeuromorphicProcessor_inputs.txt", "r");
     if(pFile == nullptr) {
         std::cerr << "Could not open inputs.txt" << std::endl;
     }

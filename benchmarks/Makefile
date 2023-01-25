@@ -75,7 +75,8 @@ $(BUILD_DIR)/NeuromorphicProcessor_inputs.txt: NeuromorphicProcessor/inputs.txt.
 	mv NeuromorphicProcessor/inputs.txt $@
 
 # pseudo target to compile all binaries
-$(BUILD_DIR)/NeuromorphicProcessor_all_bin: $(addsuffix .bin, $(addprefix $(BUILD_DIR)/NeuromorphicProcessor_, $(BENCH_OPTS)))
+NeuromorphicProcessor_all_bin: $(addsuffix .bin, $(addprefix $(BUILD_DIR)/NeuromorphicProcessor_, $(BENCH_OPTS)))
+	echo "done"
 
 ############ Benchmarking with Hyperfine
 # # https://stackoverflow.com/questions/5618615/check-if-a-program-exists-from-a-makefile
@@ -247,3 +248,5 @@ endif
 
 # .PHONY: firrtl clean build benchmark
 # .PRECIOUS: %_baseline.sv %_line.sv %_toggle.sv %.cpp %TB.sv %_baseline %_line_native %_line_firrtl %_toggle_native %_toggle_firrtl
+
+.PHONY: firrtl clean NeuromorphicProcessor_all_bin

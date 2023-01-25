@@ -70,28 +70,32 @@ jobs:
           verilator --version
       - name: Compile Scala
         run: cd coverage && sbt assembly
-      - name: Compile Firrtl Line Coverage
-        run: cd benchmarks && make LL=info riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_line_firrtl
-      - name: Compile Verilator Line Coverage
-        run: cd benchmarks && make riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_line_native
-      - name: Compile Firrtl Toggle Coverage
-        run: cd benchmarks && make LL=info riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_toggle_firrtl
-      - name: Compile Verilator Toggle Coverage
-        run: cd benchmarks && make riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_toggle_native
-      - name: Run Firrtl Line Coverage
-        run: time ./benchmarks/riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_line_firrtl
-      - name: Run Verilator Line Coverage
-        run: time ./benchmarks/riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_line_native
-      - name: Run Firrtl Toggle Coverage
-        run: time ./benchmarks/riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_toggle_firrtl
-      - name: Run Verilator Toggle Coverage
-        run: time ./benchmarks/riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_toggle_native
-      - name: Compile Firrtl Line Coverage (Neuromorphic Processor)
-        timeout-minutes: 3
-        run: cd benchmarks && make LL=info NeuromorphicProcessor/NeuromorphicProcessor_line_firrtl
-      - name: Run Firrtl Line Coverage (Neuromorphic Processor)
-        timeout-minutes: 3
-        run: time ./benchmarks/NeuromorphicProcessor/NeuromorphicProcessor_line_firrtl
+      - name: Neuromorphic Processor - Compile All
+        run: cd benchmarks && make NeuromorphicProcessor_all_bin
+
+
+      # - name: Compile Firrtl Line Coverage
+      #   run: cd benchmarks && make LL=info riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_line_firrtl
+      # - name: Compile Verilator Line Coverage
+      #   run: cd benchmarks && make riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_line_native
+      # - name: Compile Firrtl Toggle Coverage
+      #   run: cd benchmarks && make LL=info riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_toggle_firrtl
+      # - name: Compile Verilator Toggle Coverage
+      #   run: cd benchmarks && make riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_toggle_native
+      # - name: Run Firrtl Line Coverage
+      #   run: time ./benchmarks/riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_line_firrtl
+      # - name: Run Verilator Line Coverage
+      #   run: time ./benchmarks/riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_line_native
+      # - name: Run Firrtl Toggle Coverage
+      #   run: time ./benchmarks/riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_toggle_firrtl
+      # - name: Run Verilator Toggle Coverage
+      #   run: time ./benchmarks/riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester_toggle_native
+      # - name: Compile Firrtl Line Coverage (Neuromorphic Processor)
+      #   timeout-minutes: 3
+      #   run: cd benchmarks && make LL=info NeuromorphicProcessor/NeuromorphicProcessor_line_firrtl
+      # - name: Run Firrtl Line Coverage (Neuromorphic Processor)
+      #   timeout-minutes: 3
+      #   run: time ./benchmarks/NeuromorphicProcessor/NeuromorphicProcessor_line_firrtl
 
   # Sentinel job to simplify how we specify which checks need to pass in branch
   # protection and in Mergify

@@ -14,7 +14,7 @@ ALL_COV = --line-coverage --toggle-coverage --fsm-coverage --ready-valid-coverag
 LINE_COV = --line-coverage --emit-cover-info
 TOGGLE_COV = --toggle-coverage --emit-cover-info
 
-
+BENCH_OPTS = baseline firrtl_line native_line firrtl_toggle native_toggle firrtl_all
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
@@ -74,11 +74,12 @@ $(BUILD_DIR)/NeuromorphicProcessor_inputs.txt: NeuromorphicProcessor/inputs.txt.
 	gzip -dk $<
 	mv NeuromorphicProcessor/inputs.txt $@
 
+# pseudo target to compile all binaries
+$(BUILD_DIR)/NeuromorphicProcessor_all_bin: $(addsuffix .bin, $(addprefix $(BUILD_DIR)/NeuromorphicProcessor_, $(BENCH_OPTS)))
+
 ############ Benchmarking with Hyperfine
 # # https://stackoverflow.com/questions/5618615/check-if-a-program-exists-from-a-makefile
 HYPERFINE := $(shell command -v hyperfine 2> /dev/null)
-
-BENCH_OPTS = baseline firrtl_line native_line firrtl_toggle native_toggle firrtl_all
 
 
 $(BUILD_DIR)/%_results.csv: $(addsuffix .bin, $(addprefix $(BUILD_DIR)/%_, $(BENCH_OPTS))) $(BUILD_DIR)/%_inputs.txt

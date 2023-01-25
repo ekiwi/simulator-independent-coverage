@@ -26,20 +26,20 @@ clean:
 ### Neurmorphic Processor
 
 # different coverage instrumentation
-$(BUILD_DIR)/NeuromorphicProcessor_baseline.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
+$(BUILD_DIR)/NeuromorphicProcessor_baseline.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar) $(BUILD_DIR)
 	$(firrtl_bin) -i $< -E sverilog -o $@
 
-$(BUILD_DIR)/NeuromorphicProcessor_firrtl_line.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
+$(BUILD_DIR)/NeuromorphicProcessor_firrtl_line.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar) $(BUILD_DIR)
 	$(firrtl_bin) -i $< -E sverilog $(LINE_COV) -o $@
 
-$(BUILD_DIR)/NeuromorphicProcessor_firrtl_toggle.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
+$(BUILD_DIR)/NeuromorphicProcessor_firrtl_toggle.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar) $(BUILD_DIR)
 	$(firrtl_bin) -i $< -E sverilog $(TOGGLE_COV) -o $@
 
-$(BUILD_DIR)/NeuromorphicProcessor_firrtl_all.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
+$(BUILD_DIR)/NeuromorphicProcessor_firrtl_all.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar) $(BUILD_DIR)
 	$(firrtl_bin) -i $< -E sverilog $(ALL_COV) -o $@
 
 # copy over testbench file (somehow verilator has trouble with input files in different directories)
-$(BUILD_DIR)/NeuromorphicProcessor.cc: NeuromorphicProcessor/testbench.cc
+$(BUILD_DIR)/NeuromorphicProcessor.cc: NeuromorphicProcessor/testbench.cc $(BUILD_DIR)
 	cp $< $@
 
 # build executable simulation of instrumented files with verilator
@@ -65,7 +65,7 @@ $(BUILD_DIR)/NeuromorphicProcessor_native_all.bin: $(BUILD_DIR)/NeuromorphicProc
 	rm -f $@ && ln -s $(notdir $(basename $@))/VNeuromorphicProcessor $@
 
 # extract inputs for benchmarking
-$(BUILD_DIR)/NeuromorphicProcessor_inputs.txt: NeuromorphicProcessor/inputs.txt.gz
+$(BUILD_DIR)/NeuromorphicProcessor_inputs.txt: NeuromorphicProcessor/inputs.txt.gz $(BUILD_DIR)
 	gzip -dk $<
 	mv NeuromorphicProcessor/inputs.txt $@
 

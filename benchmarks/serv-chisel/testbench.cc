@@ -49,9 +49,9 @@ top->io_dbus_rdt = io_dbus_rdt;
 top->io_dbus_ack = io_dbus_ack;
 
     // load data from file
-    FILE* pFile = fopen("inputs.txt", "r");
+    FILE* pFile = fopen("serv_inputs.txt", "r");
     if(pFile == nullptr) {
-        std::cerr << "Could not open inputs.txt" << std::endl;
+        std::cerr << "Could not open serv_inputs.txt" << std::endl;
     }
 
     while (!Verilated::gotFinish() && !feof(pFile)) {

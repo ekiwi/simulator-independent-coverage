@@ -78,6 +78,8 @@ jobs:
         run: cd benchmarks && make NeuromorphicProcessor_run_once
       - name: TL-RAM - compile and run once
         run: cd benchmarks && make TLRAM_run_once
+      - name: serv - compile and run once
+        run: cd benchmarks && make serv_run_once
 
 
       # - name: Compile Firrtl Line Coverage

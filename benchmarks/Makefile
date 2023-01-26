@@ -26,20 +26,20 @@ clean:
 ### Neurmorphic Processor
 
 # different coverage instrumentation
-$(BUILD_DIR)/NeuromorphicProcessor_baseline.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar) $(BUILD_DIR)
+$(BUILD_DIR)/NeuromorphicProcessor_baseline.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog -o $@
 
-$(BUILD_DIR)/NeuromorphicProcessor_firrtl_line.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar) $(BUILD_DIR)
+$(BUILD_DIR)/NeuromorphicProcessor_firrtl_line.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(LINE_COV) -o $@
 
-$(BUILD_DIR)/NeuromorphicProcessor_firrtl_toggle.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar) $(BUILD_DIR)
+$(BUILD_DIR)/NeuromorphicProcessor_firrtl_toggle.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(TOGGLE_COV) -o $@
 
-$(BUILD_DIR)/NeuromorphicProcessor_firrtl_all.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar) $(BUILD_DIR)
+$(BUILD_DIR)/NeuromorphicProcessor_firrtl_all.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(ALL_COV) -o $@
 
 # copy over testbench file (somehow verilator has trouble with input files in different directories)
-$(BUILD_DIR)/NeuromorphicProcessor.cc: NeuromorphicProcessor/testbench.cc $(BUILD_DIR)
+$(BUILD_DIR)/NeuromorphicProcessor.cc: NeuromorphicProcessor/testbench.cc
 	cp $< $@
 
 # build executable simulation of instrumented files with verilator
@@ -70,7 +70,7 @@ $(BUILD_DIR)/NeuromorphicProcessor_native_all.bin: $(BUILD_DIR)/NeuromorphicProc
 	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
 
 # extract inputs for benchmarking
-$(BUILD_DIR)/NeuromorphicProcessor_inputs.txt: NeuromorphicProcessor/inputs.txt.gz $(BUILD_DIR)
+$(BUILD_DIR)/NeuromorphicProcessor_inputs.txt: NeuromorphicProcessor/inputs.txt.gz
 	gzip -dk $<
 	mv NeuromorphicProcessor/inputs.txt $@
 
@@ -83,20 +83,20 @@ NeuromorphicProcessor_all_bin: $(addsuffix .bin, $(addprefix $(BUILD_DIR)/Neurom
 #### TL-RAM Benchmark
 
 # different coverage instrumentation
-$(BUILD_DIR)/TLRAM_baseline.sv: TLRAM/TLRAMStandalone.fir $(firrtl_jar) $(BUILD_DIR)
+$(BUILD_DIR)/TLRAM_baseline.sv: TLRAM/TLRAMStandalone.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog -o $@
 
-$(BUILD_DIR)/TLRAM_firrtl_line.sv: TLRAM/TLRAMStandalone.fir $(firrtl_jar) $(BUILD_DIR)
+$(BUILD_DIR)/TLRAM_firrtl_line.sv: TLRAM/TLRAMStandalone.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(LINE_COV) -o $@
 
-$(BUILD_DIR)/TLRAM_firrtl_toggle.sv: TLRAM/TLRAMStandalone.fir $(firrtl_jar) $(BUILD_DIR)
+$(BUILD_DIR)/TLRAM_firrtl_toggle.sv: TLRAM/TLRAMStandalone.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(TOGGLE_COV) -o $@
 
-$(BUILD_DIR)/TLRAM_firrtl_all.sv: TLRAM/TLRAMStandalone.fir $(firrtl_jar) $(BUILD_DIR)
+$(BUILD_DIR)/TLRAM_firrtl_all.sv: TLRAM/TLRAMStandalone.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(ALL_COV) -o $@
 
 # copy over testbench file (somehow verilator has trouble with input files in different directories)
-$(BUILD_DIR)/TLRAM.cc: TLRAM/TLRAMStandalone.cpp $(BUILD_DIR)
+$(BUILD_DIR)/TLRAM.cc: TLRAM/TLRAMStandalone.cpp
 	cp $< $@
 
 # build executable simulation of instrumented files with verilator
@@ -135,6 +135,61 @@ $(BUILD_DIR)/TLRAM_inputs.txt: TLRAM/inputs.txt.gz $(BUILD_DIR)
 TLRAM_all_bin: $(addsuffix .bin, $(addprefix $(BUILD_DIR)/TLRAM_, $(BENCH_OPTS))) $(BUILD_DIR)/TLRAM_inputs.txt
 	echo "done"
 
+
+#### serv Benchmark
+
+# different coverage instrumentation
+$(BUILD_DIR)/serv_baseline.sv: serv-chisel/ServTopWithRam.fir $(firrtl_jar)
+	$(firrtl_bin) -i $< -E sverilog -o $@
+
+$(BUILD_DIR)/serv_firrtl_line.sv: serv-chisel/ServTopWithRam.fir $(firrtl_jar)
+	$(firrtl_bin) -i $< -E sverilog $(LINE_COV) -o $@
+
+$(BUILD_DIR)/serv_firrtl_toggle.sv: serv-chisel/ServTopWithRam.fir $(firrtl_jar)
+	$(firrtl_bin) -i $< -E sverilog $(TOGGLE_COV) -o $@
+
+$(BUILD_DIR)/serv_firrtl_all.sv: serv-chisel/ServTopWithRam.fir $(firrtl_jar)
+	$(firrtl_bin) -i $< -E sverilog $(ALL_COV) -o $@
+
+# copy over testbench file (somehow verilator has trouble with input files in different directories)
+$(BUILD_DIR)/serv.cc: serv-chisel/testbench.cc
+	cp $< $@
+
+# build executable simulation of instrumented files with verilator
+$(BUILD_DIR)/serv_baseline.bin: $(BUILD_DIR)/serv_baseline.sv $(BUILD_DIR)/serv.cc
+	cd $(BUILD_DIR) && \
+	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../serv --top-module ServTopWithRam -o sim
+	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
+
+$(BUILD_DIR)/serv_firrtl_%.bin: $(BUILD_DIR)/serv_firrtl_%.sv $(BUILD_DIR)/serv.cc
+	cd $(BUILD_DIR) && \
+	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../serv --top-module ServTopWithRam -o sim
+	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
+
+# build the baseline Verilog with native verilator instrumentation for comparison
+$(BUILD_DIR)/serv_native_line.bin: $(BUILD_DIR)/serv_baseline.sv $(BUILD_DIR)/serv.cc
+	cd $(BUILD_DIR) && \
+	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../serv --top-module ServTopWithRam --coverage-line -o sim
+	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
+
+$(BUILD_DIR)/serv_native_toggle.bin: $(BUILD_DIR)/serv_baseline.sv $(BUILD_DIR)/serv.cc
+	cd $(BUILD_DIR) && \
+	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../serv --top-module ServTopWithRam --coverage-toggle -o sim
+	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
+
+$(BUILD_DIR)/serv_native_all.bin: $(BUILD_DIR)/serv_baseline.sv $(BUILD_DIR)/serv.cc
+	cd $(BUILD_DIR) && \
+	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../serv --top-module ServTopWithRam --coverage-line --coverage-toggle -o sim
+	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
+
+# extract inputs for benchmarking
+$(BUILD_DIR)/serv_inputs.txt: serv-chisel/inputs.txt.gz
+	gzip -dk $<
+	mv serv-chisel/inputs.txt $@
+
+# pseudo target to compile all binaries
+serv_all_bin: $(addsuffix .bin, $(addprefix $(BUILD_DIR)/serv_, $(BENCH_OPTS))) $(BUILD_DIR)/serv_inputs.txt
+	echo "done"
 
 ############ Benchmarking with Hyperfine
 # # https://stackoverflow.com/questions/5618615/check-if-a-program-exists-from-a-makefile

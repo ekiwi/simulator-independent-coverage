@@ -268,23 +268,23 @@ $(BUILD_DIR)/riscv_mini_baseline.bin: $(BUILD_DIR)/riscv_mini_baseline.sv $(BUIL
 
 $(BUILD_DIR)/riscv_mini_firrtl_%.bin: $(BUILD_DIR)/riscv_mini_firrtl_%.sv $(BUILD_DIR)/riscv_mini.cc
 	cd $(BUILD_DIR) && \
-	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../riscv_mini --top-module TileTester -o sim
+	 $(VERILATOR) $(notdir $^) -CFLAGS "-DVL_USER_FINISH" --Mdir $(notdir $(basename $@)) -I../riscv_mini --top-module TileTester -o sim
 	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
 
 # build the baseline Verilog with native verilator instrumentation for comparison
 $(BUILD_DIR)/riscv_mini_native_line.bin: $(BUILD_DIR)/riscv_mini_baseline.sv $(BUILD_DIR)/riscv_mini.cc
 	cd $(BUILD_DIR) && \
-	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../riscv_mini --top-module TileTester --coverage-line -o sim
+	 $(VERILATOR) $(notdir $^) -CFLAGS "-DVL_USER_FINISH" --Mdir $(notdir $(basename $@)) -I../riscv_mini --top-module TileTester --coverage-line -o sim
 	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
 
 $(BUILD_DIR)/riscv_mini_native_toggle.bin: $(BUILD_DIR)/riscv_mini_baseline.sv $(BUILD_DIR)/riscv_mini.cc
 	cd $(BUILD_DIR) && \
-	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../riscv_mini --top-module TileTester --coverage-toggle -o sim
+	 $(VERILATOR) $(notdir $^) -CFLAGS "-DVL_USER_FINISH" --Mdir $(notdir $(basename $@)) -I../riscv_mini --top-module TileTester --coverage-toggle -o sim
 	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
 
 $(BUILD_DIR)/riscv_mini_native_all.bin: $(BUILD_DIR)/riscv_mini_baseline.sv $(BUILD_DIR)/riscv_mini.cc
 	cd $(BUILD_DIR) && \
-	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../riscv_mini --top-module TileTester --coverage-line --coverage-toggle -o sim
+	 $(VERILATOR) $(notdir $^) -CFLAGS "-DVL_USER_FINISH" --Mdir $(notdir $(basename $@)) -I../riscv_mini --top-module TileTester --coverage-line --coverage-toggle -o sim
 	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
 
 # create a dummy inputs file (riscv-mini is a self contained testbench)

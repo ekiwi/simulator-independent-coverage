@@ -14,6 +14,10 @@ double sc_time_stamp() {
     return main_time;
 }
 
+static bool encounteredFinish = false;
+void vl_finish(const char* filename, int linenum, const char* hier) {
+    encounteredFinish = true;
+}
 
 int main(int argc, char **argv, char **env) {
     // Prevent unused variable warnings
@@ -33,10 +37,12 @@ int main(int argc, char **argv, char **env) {
 
     top->clock = 0;
     top->reset = 0;
-    while (!Verilated::gotFinish()) { // no timeout
+    uint64_t cycles = 0;
+    while (!Verilated::gotFinish() && !encounteredFinish) { // no timeout
         main_time++;
         top->clock = !top->clock;
         if (!top->clock) { // after negative edge
+            cycles += 1;
             if (main_time > 1 && main_time < 10) {
                 top->reset = 1;  // Assert reset
             } else {
@@ -53,6 +59,8 @@ int main(int argc, char **argv, char **env) {
 #if VM_TRACE
     if (tfp) { tfp->close(); }
 #endif
+
+    std::cout << cycles << " cycles" << std::endl;
 
     delete top;
     exit(0);

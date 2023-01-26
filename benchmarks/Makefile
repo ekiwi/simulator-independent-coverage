@@ -2,6 +2,7 @@ LL := warn
 BUILD_DIR := build
 firrtl_jar = ../coverage/utils/bin/firrtl.jar
 firrtl_bin = ../coverage/utils/bin/firrtl -ll ${LL}
+firrtl_bin_info = ../coverage/utils/bin/firrtl -ll info
 firrtl_srcs = $(shell find ../coverage/src -type f)
 $(firrtl_jar): $(firrtl_srcs)
 	cd ../coverage && sbt assembly
@@ -18,6 +19,8 @@ FSM_COV = --fsm-coverage --emit-cover-info
 
 
 BENCH_OPTS = baseline firrtl_line native_line firrtl_toggle native_toggle firrtl_all firrtl_fsm firrtl_ready_valid
+CIRCUIT_NAMES = NeuromorphicProcessor TLRAM serv riscv_mini
+
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
@@ -46,6 +49,11 @@ $(BUILD_DIR)/NeuromorphicProcessor_firrtl_fsm.sv: NeuromorphicProcessor/Neuromor
 
 $(BUILD_DIR)/NeuromorphicProcessor_firrtl_all.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(ALL_COV) -o $@
+
+# print some info on coverage instrumentation
+$(BUILD_DIR)/NeuromorphicProcessor_coverage.txt: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
+	$(firrtl_bin_info) -i $< -E sverilog $(ALL_COV) -o $(BUILD_DIR)/NeuromorphicProcessor_firrtl_all.sv > $@
+
 
 # copy over testbench file (somehow verilator has trouble with input files in different directories)
 $(BUILD_DIR)/NeuromorphicProcessor.cc: NeuromorphicProcessor/testbench.cc
@@ -110,6 +118,10 @@ $(BUILD_DIR)/TLRAM_firrtl_fsm.sv: TLRAM/TLRAMStandalone.fir $(firrtl_jar)
 $(BUILD_DIR)/TLRAM_firrtl_all.sv: TLRAM/TLRAMStandalone.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(ALL_COV) -o $@
 
+# print some info on coverage instrumentation
+$(BUILD_DIR)/TLRAM_coverage.txt: TLRAM/TLRAMStandalone.fir $(firrtl_jar)
+	$(firrtl_bin_info) -i $< -E sverilog $(ALL_COV) -o $(BUILD_DIR)/TLRAM_firrtl_all.sv > $@
+
 # copy over testbench file (somehow verilator has trouble with input files in different directories)
 $(BUILD_DIR)/TLRAM.cc: TLRAM/TLRAMStandalone.cpp
 	cp $< $@
@@ -171,6 +183,10 @@ $(BUILD_DIR)/serv_firrtl_fsm.sv: serv-chisel/ServTopWithRam.fir $(firrtl_jar)
 
 $(BUILD_DIR)/serv_firrtl_all.sv: serv-chisel/ServTopWithRam.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(ALL_COV) -o $@
+
+# print some info on coverage instrumentation
+$(BUILD_DIR)/serv_coverage.txt: serv-chisel/ServTopWithRam.fir $(firrtl_jar)
+	$(firrtl_bin_info) -i $< -E sverilog $(ALL_COV) -o $(BUILD_DIR)/serv_firrtl_all.sv > $@
 
 # copy over testbench file (somehow verilator has trouble with input files in different directories)
 $(BUILD_DIR)/serv.cc: serv-chisel/testbench.cc
@@ -235,6 +251,11 @@ $(BUILD_DIR)/riscv_mini_firrtl_fsm.sv: riscv-mini/TileTester_BmarkTestsmedian.ri
 $(BUILD_DIR)/riscv_mini_firrtl_all.sv: riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.fir riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.anno.json  $(firrtl_jar)
 	$(firrtl_bin) -i $< -faf $(filter %.anno.json, $^) -E sverilog $(ALL_COV) -o $@
 
+# print some info on coverage instrumentation
+$(BUILD_DIR)/riscv_mini_coverage.txt:  riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.fir riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.anno.json  $(firrtl_jar)
+	$(firrtl_bin_info) -i $< -faf $(filter %.anno.json, $^) -E sverilog $(ALL_COV) -o $(BUILD_DIR)/riscv_mini_firrtl_all.sv > $@
+
+
 # # copy over testbench file (somehow verilator has trouble with input files in different directories)
 $(BUILD_DIR)/riscv_mini.cc: riscv-mini/testbench.cc
 	cp $< $@
@@ -242,7 +263,7 @@ $(BUILD_DIR)/riscv_mini.cc: riscv-mini/testbench.cc
 # build executable simulation of instrumented files with verilator
 $(BUILD_DIR)/riscv_mini_baseline.bin: $(BUILD_DIR)/riscv_mini_baseline.sv $(BUILD_DIR)/riscv_mini.cc
 	cd $(BUILD_DIR) && \
-	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../riscv_mini --top-module TileTester -o sim
+	 $(VERILATOR) $(notdir $^) -CFLAGS "-DVL_USER_FINISH" --Mdir $(notdir $(basename $@)) -I../riscv_mini --top-module TileTester -o sim
 	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
 
 $(BUILD_DIR)/riscv_mini_firrtl_%.bin: $(BUILD_DIR)/riscv_mini_firrtl_%.sv $(BUILD_DIR)/riscv_mini.cc
@@ -285,7 +306,7 @@ ifndef HYPERFINE
 	$(error "install hyperfine: https://github.com/sharkdp/hyperfine")
 endif
 	cd $(BUILD_DIR) && \
-	hyperfine --warmup 1 --max-runs 100 --export-csv $(notdir $@) $(addprefix ./, $(filter %.bin, $(notdir $^)))
+	hyperfine --export-csv $(notdir $@) $(addprefix ./, $(filter %.bin, $(notdir $^)))
 
 
 # run once for a quick test
@@ -297,8 +318,8 @@ endif
 	hyperfine --warmup 0 --max-runs 1 $(addprefix ./, $(filter %.bin, $(notdir $^)))
 
 
-# figure 7romorphicProcessor
-BENCH_RESULTS = $(BUILD_DIR)/NeuromorphicProcessor_results.csv $(BUILD_DIR)/TLRAM_results.csv $(BUILD_DIR)/serv_results.csv $(BUILD_DIR)/riscv_mini_results.csv
+# figure 7
+BENCH_RESULTS = $(addprefix $(BUILD_DIR)/,$(addsuffix _results.csv, $(CIRCUIT_NAMES)))
 $(BUILD_DIR)/figure7_verilator_overhead_small.csv $(BUILD_DIR)/figure7_verilator_overhead_large.csv: $(BENCH_RESULTS) figure7.py
 	./figure7.py
 
@@ -309,4 +330,23 @@ figure7: $(BUILD_DIR)/figure7_verilator_overhead_small.csv $(BUILD_DIR)/figure7_
 $(BUILD_DIR)/%_cycles.txt: $(BUILD_DIR)/%_baseline.bin $(BUILD_DIR)/%_inputs.txt
 	cd $(BUILD_DIR) && ./$(filter %.bin, $(notdir $^)) > $(notdir $@)
 
-.PHONY: firrtl clean NeuromorphicProcessor_all_bin TLRAM_all_bin figure7
+# table 2
+$(BUILD_DIR)/%_baseline_results.csv: $(BUILD_DIR)/%_baseline.bin $(BUILD_DIR)/%_inputs.txt
+ifndef HYPERFINE
+	$(error "install hyperfine: https://github.com/sharkdp/hyperfine")
+endif
+	cd $(BUILD_DIR) && \
+	hyperfine --export-csv $(notdir $@) $(addprefix ./, $(filter %.bin, $(notdir $^)))
+
+
+COVERAGE_TXT = $(addprefix $(BUILD_DIR)/,$(addsuffix _coverage.txt, $(CIRCUIT_NAMES))) 
+BASELINE_PERF = $(addprefix $(BUILD_DIR)/,$(addsuffix _baseline_results.csv, $(CIRCUIT_NAMES)))
+CYCLE_COUNTS = $(addprefix $(BUILD_DIR)/,$(addsuffix _cycles.txt, $(CIRCUIT_NAMES)))
+$(BUILD_DIR)/table2.csv: $(COVERAGE_TXT) $(BASELINE_PERF) $(CYCLE_COUNTS) table2.py
+	./table2.py
+
+table2: $(BUILD_DIR)/table2.csv
+
+
+
+.PHONY: firrtl clean $(addsuffix _all_bin, $(CIRCUIT_NAMES)) figure7 table2

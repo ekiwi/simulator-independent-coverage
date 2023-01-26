@@ -268,7 +268,7 @@ $(BUILD_DIR)/riscv_mini_native_all.bin: $(BUILD_DIR)/riscv_mini_baseline.sv $(BU
 
 # create a dummy inputs file (riscv-mini is a self contained testbench)
 $(BUILD_DIR)/riscv_mini_inputs.txt:
-	echi "" > $@
+	echo "" > $@
 
 # pseudo target to compile all binaries
 riscv_mini_all_bin: $(addsuffix .bin, $(addprefix $(BUILD_DIR)/riscv_mini_, $(BENCH_OPTS))) $(BUILD_DIR)/riscv_mini_inputs.txt

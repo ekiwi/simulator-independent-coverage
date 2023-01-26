@@ -23,7 +23,7 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)/*
 
 
 ### Neurmorphic Processor
@@ -211,6 +211,69 @@ $(BUILD_DIR)/serv_inputs.txt: serv-chisel/inputs.txt.gz
 # pseudo target to compile all binaries
 serv_all_bin: $(addsuffix .bin, $(addprefix $(BUILD_DIR)/serv_, $(BENCH_OPTS))) $(BUILD_DIR)/serv_inputs.txt
 	echo "done"
+
+
+
+#### RISCV-Mini Benchmark
+
+# different coverage instrumentation
+$(BUILD_DIR)/riscv_mini_baseline.sv: riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.fir riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.anno.json $(firrtl_jar)
+	$(firrtl_bin) -i $< -faf $(filter %.anno.json, $^) -E sverilog -o $@
+
+$(BUILD_DIR)/riscv_mini_firrtl_line.sv: riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.fir riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.anno.json  $(firrtl_jar)
+	$(firrtl_bin) -i $< -faf $(filter %.anno.json, $^) -E sverilog $(LINE_COV) -o $@
+
+$(BUILD_DIR)/riscv_mini_firrtl_toggle.sv: riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.fir riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.anno.json  $(firrtl_jar)
+	$(firrtl_bin) -i $< -faf $(filter %.anno.json, $^) -E sverilog $(TOGGLE_COV) -o $@
+
+$(BUILD_DIR)/riscv_mini_firrtl_ready_valid.sv: riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.fir riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.anno.json  $(firrtl_jar)
+	$(firrtl_bin) -i $< -faf $(filter %.anno.json, $^) -E sverilog $(READY_VALID_COV) -o $@
+
+$(BUILD_DIR)/riscv_mini_firrtl_fsm.sv: riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.fir riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.anno.json  $(firrtl_jar)
+	$(firrtl_bin) -i $< -faf $(filter %.anno.json, $^) -E sverilog $(FSM_COV) -o $@
+
+$(BUILD_DIR)/riscv_mini_firrtl_all.sv: riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.fir riscv-mini/TileTester_BmarkTestsmedian.riscv/TileTester.anno.json  $(firrtl_jar)
+	$(firrtl_bin) -i $< -faf $(filter %.anno.json, $^) -E sverilog $(ALL_COV) -o $@
+
+# # copy over testbench file (somehow verilator has trouble with input files in different directories)
+$(BUILD_DIR)/riscv_mini.cc: riscv-mini/testbench.cc
+	cp $< $@
+
+# build executable simulation of instrumented files with verilator
+$(BUILD_DIR)/riscv_mini_baseline.bin: $(BUILD_DIR)/riscv_mini_baseline.sv $(BUILD_DIR)/riscv_mini.cc
+	cd $(BUILD_DIR) && \
+	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../riscv_mini --top-module TileTester -o sim
+	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
+
+$(BUILD_DIR)/riscv_mini_firrtl_%.bin: $(BUILD_DIR)/riscv_mini_firrtl_%.sv $(BUILD_DIR)/riscv_mini.cc
+	cd $(BUILD_DIR) && \
+	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../riscv_mini --top-module TileTester -o sim
+	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
+
+# build the baseline Verilog with native verilator instrumentation for comparison
+$(BUILD_DIR)/riscv_mini_native_line.bin: $(BUILD_DIR)/riscv_mini_baseline.sv $(BUILD_DIR)/riscv_mini.cc
+	cd $(BUILD_DIR) && \
+	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../riscv_mini --top-module TileTester --coverage-line -o sim
+	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
+
+$(BUILD_DIR)/riscv_mini_native_toggle.bin: $(BUILD_DIR)/riscv_mini_baseline.sv $(BUILD_DIR)/riscv_mini.cc
+	cd $(BUILD_DIR) && \
+	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../riscv_mini --top-module TileTester --coverage-toggle -o sim
+	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
+
+$(BUILD_DIR)/riscv_mini_native_all.bin: $(BUILD_DIR)/riscv_mini_baseline.sv $(BUILD_DIR)/riscv_mini.cc
+	cd $(BUILD_DIR) && \
+	 $(VERILATOR) $(notdir $^) --Mdir $(notdir $(basename $@)) -I../riscv_mini --top-module TileTester --coverage-line --coverage-toggle -o sim
+	rm -f $@ && ln -s $(notdir $(basename $@))/sim $@
+
+# create a dummy inputs file (riscv-mini is a self contained testbench)
+$(BUILD_DIR)/riscv_mini_inputs.txt:
+	echi "" > $@
+
+# pseudo target to compile all binaries
+riscv_mini_all_bin: $(addsuffix .bin, $(addprefix $(BUILD_DIR)/riscv_mini_, $(BENCH_OPTS))) $(BUILD_DIR)/riscv_mini_inputs.txt
+	echo "done"
+
 
 ############ Benchmarking with Hyperfine
 # # https://stackoverflow.com/questions/5618615/check-if-a-program-exists-from-a-makefile

@@ -1,11 +1,11 @@
 #include <verilated.h>
 #include <stdint.h>
-#include "V${TOP}.h"
+#include "VTileTester.h"
 #if VM_TRACE
 # include <verilated_vcd_c.h> // Trace file format header
 #endif
 
-#define TOP_TYPE V${TOP}
+#define TOP_TYPE VTileTester
 
 // Current simulation time
 vluint64_t main_time = 0;

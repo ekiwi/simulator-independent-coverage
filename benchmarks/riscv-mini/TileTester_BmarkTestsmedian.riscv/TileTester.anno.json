@@ -1,18 +1,36 @@
 [
   {
-    "class":"firrtl.EmitCircuitAnnotation",
-    "emitter":"firrtl.ChirrtlEmitter"
+    "class":"chisel3.experimental.EnumAnnotations$EnumDefAnnotation",
+    "typeName":"CacheState",
+    "definition":{
+      "Idle":0,
+      "ReadCache":1,
+      "WriteCache":2,
+      "WriteBack":3,
+      "WriteAck":4,
+      "RefillReady":5,
+      "Refill":6
+    }
   },
   {
-    "class":"firrtl.options.TargetDirAnnotation",
-    "directory":"test_run_dir/TileTester_BmarkTestsmedian.riscv"
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"TileTester.Cache.state",
+    "enumTypeName":"CacheState"
   },
   {
-    "class":"firrtl.options.OutputAnnotationFileAnnotation",
-    "file":"TileTester"
+    "class":"chisel3.experimental.EnumAnnotations$EnumDefAnnotation",
+    "typeName":"MemArbiterState",
+    "definition":{
+      "Idle":0,
+      "ICacheRead":1,
+      "DCacheRead":2,
+      "DCacheWrite":3,
+      "DCacheAck":4
+    }
   },
   {
-    "class":"firrtl.transforms.BlackBoxTargetDirAnno",
-    "targetDir":"test_run_dir/TileTester_BmarkTestsmedian.riscv"
-  }
+    "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
+    "target":"TileTester.MemArbiter.state",
+    "enumTypeName":"MemArbiterState"
+  },
 ]

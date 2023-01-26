@@ -80,6 +80,9 @@ jobs:
         run: cd benchmarks && make TLRAM_run_once
       - name: serv - compile and run once
         run: cd benchmarks && make serv_run_once
+      - name: RISCV-Mini - compile and run once
+        run: cd benchmarks && make riscv_mini_run_once
+
 
   # Sentinel job to simplify how we specify which checks need to pass in branch
   # protection and in Mergify

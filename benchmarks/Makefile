@@ -13,8 +13,11 @@ VERILATOR = verilator -Wno-WIDTH --coverage-user --cc --exe --build
 ALL_COV = --line-coverage --toggle-coverage --fsm-coverage --ready-valid-coverage --emit-cover-info
 LINE_COV = --line-coverage --emit-cover-info
 TOGGLE_COV = --toggle-coverage --emit-cover-info
+READY_VALID_COV = --ready-valid-coverage --emit-cover-info
+FSM_COV = --fsm-coverage --emit-cover-info
 
-BENCH_OPTS = baseline firrtl_line native_line firrtl_toggle native_toggle firrtl_all
+
+BENCH_OPTS = baseline firrtl_line native_line firrtl_toggle native_toggle firrtl_all firrtl_fsm firrtl_ready_valid
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
@@ -34,6 +37,12 @@ $(BUILD_DIR)/NeuromorphicProcessor_firrtl_line.sv: NeuromorphicProcessor/Neuromo
 
 $(BUILD_DIR)/NeuromorphicProcessor_firrtl_toggle.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(TOGGLE_COV) -o $@
+
+$(BUILD_DIR)/NeuromorphicProcessor_firrtl_ready_valid.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
+	$(firrtl_bin) -i $< -E sverilog $(READY_VALID_COV) -o $@
+
+$(BUILD_DIR)/NeuromorphicProcessor_firrtl_fsm.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
+	$(firrtl_bin) -i $< -E sverilog $(FSM_COV) -o $@
 
 $(BUILD_DIR)/NeuromorphicProcessor_firrtl_all.sv: NeuromorphicProcessor/NeuromorphicProcessor.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(ALL_COV) -o $@
@@ -92,6 +101,12 @@ $(BUILD_DIR)/TLRAM_firrtl_line.sv: TLRAM/TLRAMStandalone.fir $(firrtl_jar)
 $(BUILD_DIR)/TLRAM_firrtl_toggle.sv: TLRAM/TLRAMStandalone.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(TOGGLE_COV) -o $@
 
+$(BUILD_DIR)/TLRAM_firrtl_ready_valid.sv: TLRAM/TLRAMStandalone.fir $(firrtl_jar)
+	$(firrtl_bin) -i $< -E sverilog $(READY_VALID_COV) -o $@
+
+$(BUILD_DIR)/TLRAM_firrtl_fsm.sv: TLRAM/TLRAMStandalone.fir $(firrtl_jar)
+	$(firrtl_bin) -i $< -E sverilog $(FSM_COV) -o $@
+
 $(BUILD_DIR)/TLRAM_firrtl_all.sv: TLRAM/TLRAMStandalone.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(ALL_COV) -o $@
 
@@ -147,6 +162,12 @@ $(BUILD_DIR)/serv_firrtl_line.sv: serv-chisel/ServTopWithRam.fir $(firrtl_jar)
 
 $(BUILD_DIR)/serv_firrtl_toggle.sv: serv-chisel/ServTopWithRam.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(TOGGLE_COV) -o $@
+
+$(BUILD_DIR)/serv_firrtl_ready_valid.sv: serv-chisel/ServTopWithRam.fir $(firrtl_jar)
+	$(firrtl_bin) -i $< -E sverilog $(READY_VALID_COV) -o $@
+
+$(BUILD_DIR)/serv_firrtl_fsm.sv: serv-chisel/ServTopWithRam.fir $(firrtl_jar)
+	$(firrtl_bin) -i $< -E sverilog $(FSM_COV) -o $@
 
 $(BUILD_DIR)/serv_firrtl_all.sv: serv-chisel/ServTopWithRam.fir $(firrtl_jar)
 	$(firrtl_bin) -i $< -E sverilog $(ALL_COV) -o $@
@@ -211,5 +232,10 @@ ifndef HYPERFINE
 endif
 	cd $(BUILD_DIR) && \
 	hyperfine --warmup 0 --max-runs 1 $(addprefix ./, $(filter %.bin, $(notdir $^)))
+
+
+# cycle count
+$(BUILD_DIR)/%_cycles.txt: $(BUILD_DIR)/%_baseline.bin $(BUILD_DIR)/%_inputs.txt
+	cd $(BUILD_DIR) && ./$(filter %.bin, $(notdir $^)) > $(notdir $@)
 
 .PHONY: firrtl clean NeuromorphicProcessor_all_bin TLRAM_all_bin

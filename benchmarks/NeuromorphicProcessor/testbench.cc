@@ -34,26 +34,28 @@ int main(int argc, char **argv, char **env) {
     tfp->open("dump.vcd");
 #endif
 
-uint64_t reset = 0;
-uint64_t io_uartRx = 0;    
+    uint64_t reset = 0;
+    uint64_t io_uartRx = 0;    
 
-top->reset = reset;
-top->io_uartRx = io_uartRx;
+    top->reset = reset;
+    top->io_uartRx = io_uartRx;
 
     // load data from file
     FILE* pFile = fopen("NeuromorphicProcessor_inputs.txt", "r");
     if(pFile == nullptr) {
-        std::cerr << "Could not open inputs.txt" << std::endl;
+        std::cerr << "Could not open NeuromorphicProcessor_inputs.txt" << std::endl;
     }
+
+    uint64_t cycles = 0;
 
     while (!Verilated::gotFinish() && !feof(pFile)) {
         main_time++;
         top->clock = !top->clock;
         if (!top->clock) { // after negative edge
-
-fscanf(pFile, "%x %x\n", &reset, &io_uartRx);
-top->reset = reset;
-top->io_uartRx = io_uartRx;
+            cycles += 1;
+            fscanf(pFile, "%x %x\n", &reset, &io_uartRx);
+            top->reset = reset;
+            top->io_uartRx = io_uartRx;
 
         }
         top->eval();
@@ -69,6 +71,8 @@ top->io_uartRx = io_uartRx;
 #if VM_TRACE
     if (tfp) { tfp->close(); }
 #endif
+
+    std::cout << cycles << " cycles" << std::endl;
 
     delete top;
     exit(0);

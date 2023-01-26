@@ -34,19 +34,19 @@ int main(int argc, char **argv, char **env) {
     tfp->open("dump.vcd");
 #endif
 
-uint64_t reset = 0;
-uint64_t io_timerInterrupt = 0;
-uint64_t io_ibus_rdt = 0;
-uint64_t io_ibus_ack = 0;
-uint64_t io_dbus_rdt = 0;
-uint64_t io_dbus_ack = 0;    
+    uint64_t reset = 0;
+    uint64_t io_timerInterrupt = 0;
+    uint64_t io_ibus_rdt = 0;
+    uint64_t io_ibus_ack = 0;
+    uint64_t io_dbus_rdt = 0;
+    uint64_t io_dbus_ack = 0;    
 
-top->reset = reset;
-top->io_timerInterrupt = io_timerInterrupt;
-top->io_ibus_rdt = io_ibus_rdt;
-top->io_ibus_ack = io_ibus_ack;
-top->io_dbus_rdt = io_dbus_rdt;
-top->io_dbus_ack = io_dbus_ack;
+    top->reset = reset;
+    top->io_timerInterrupt = io_timerInterrupt;
+    top->io_ibus_rdt = io_ibus_rdt;
+    top->io_ibus_ack = io_ibus_ack;
+    top->io_dbus_rdt = io_dbus_rdt;
+    top->io_dbus_ack = io_dbus_ack;
 
     // load data from file
     FILE* pFile = fopen("serv_inputs.txt", "r");
@@ -54,18 +54,20 @@ top->io_dbus_ack = io_dbus_ack;
         std::cerr << "Could not open serv_inputs.txt" << std::endl;
     }
 
+    uint64_t cycles = 0;
+
     while (!Verilated::gotFinish() && !feof(pFile)) {
         main_time++;
         top->clock = !top->clock;
         if (!top->clock) { // after negative edge
-
-fscanf(pFile, "%x %x %x %x %x %x\n", &reset, &io_timerInterrupt, &io_ibus_rdt, &io_ibus_ack, &io_dbus_rdt, &io_dbus_ack);
-top->reset = reset;
-top->io_timerInterrupt = io_timerInterrupt;
-top->io_ibus_rdt = io_ibus_rdt;
-top->io_ibus_ack = io_ibus_ack;
-top->io_dbus_rdt = io_dbus_rdt;
-top->io_dbus_ack = io_dbus_ack;
+            cycles += 1;
+            fscanf(pFile, "%x %x %x %x %x %x\n", &reset, &io_timerInterrupt, &io_ibus_rdt, &io_ibus_ack, &io_dbus_rdt, &io_dbus_ack);
+            top->reset = reset;
+            top->io_timerInterrupt = io_timerInterrupt;
+            top->io_ibus_rdt = io_ibus_rdt;
+            top->io_ibus_ack = io_ibus_ack;
+            top->io_dbus_rdt = io_dbus_rdt;
+            top->io_dbus_ack = io_dbus_ack;
 
         }
         top->eval();
@@ -81,6 +83,8 @@ top->io_dbus_ack = io_dbus_ack;
 #if VM_TRACE
     if (tfp) { tfp->close(); }
 #endif
+
+    std::cout << cycles << " cycles" << std::endl;
 
     delete top;
     exit(0);

@@ -70,8 +70,10 @@ jobs:
           verilator --version
       - name: Compile Scala
         run: cd coverage && sbt assembly
-      - name: Neuromorphic Processor - Compile All
-        run: cd benchmarks && make NeuromorphicProcessor_all_bin
+      - name: Neuromorphic Processor - compile and run once
+        run: cd benchmarks && make NeuromorphicProcessor_run_once
+      - name: TL-RAM - compile and run once
+        run: cd benchmarks && make TLRAM_run_once
 
 
       # - name: Compile Firrtl Line Coverage

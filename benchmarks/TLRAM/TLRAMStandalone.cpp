@@ -59,9 +59,9 @@ top->in_a_bits_corrupt = in_a_bits_corrupt;
 top->in_d_ready = in_d_ready;
 
     // load data from file
-    FILE* pFile = fopen("inputs.txt", "r");
+    FILE* pFile = fopen("TLRAM_inputs.txt", "r");
     if(pFile == nullptr) {
-        std::cerr << "Could not open inputs.txt" << std::endl;
+        std::cerr << "Could not open TLRAM_inputs.txt" << std::endl;
     }
 
     while (!Verilated::gotFinish() && !feof(pFile)) {

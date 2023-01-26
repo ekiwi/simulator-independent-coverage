@@ -1,0 +1,5 @@
+Benchmark, Line Native, Line FIRRTL, FSM, Ready/Valid
+rv-mini, 13.85, 11.01, 4.61, 4.97
+serv, 12.38, 13.62, 0, 0
+TLRAM, 15.24, 0, 0, 0
+Neuro, 40.04, 35.89, 0, 0

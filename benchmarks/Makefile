@@ -297,8 +297,16 @@ endif
 	hyperfine --warmup 0 --max-runs 1 $(addprefix ./, $(filter %.bin, $(notdir $^)))
 
 
+# figure 7romorphicProcessor
+BENCH_RESULTS = $(BUILD_DIR)/NeuromorphicProcessor_results.csv $(BUILD_DIR)/TLRAM_results.csv $(BUILD_DIR)/serv_results.csv $(BUILD_DIR)/riscv_mini_results.csv
+$(BUILD_DIR)/figure7_verilator_overhead_small.csv $(BUILD_DIR)/figure7_verilator_overhead_large.csv: $(BENCH_RESULTS) figure7.py
+	./figure7.py
+
+figure7: $(BUILD_DIR)/figure7_verilator_overhead_small.csv $(BUILD_DIR)/figure7_verilator_overhead_large.csv
+
+
 # cycle count
 $(BUILD_DIR)/%_cycles.txt: $(BUILD_DIR)/%_baseline.bin $(BUILD_DIR)/%_inputs.txt
 	cd $(BUILD_DIR) && ./$(filter %.bin, $(notdir $^)) > $(notdir $@)
 
-.PHONY: firrtl clean NeuromorphicProcessor_all_bin TLRAM_all_bin
+.PHONY: firrtl clean NeuromorphicProcessor_all_bin TLRAM_all_bin figure7

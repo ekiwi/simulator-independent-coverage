@@ -20,8 +20,19 @@ $(JAR): $(SCALA_SRC)
 	sbt assembly
 
 
+# we use fifos to communicate between JVM fuzz server and the native AFL proxy
+a2j:
+	mkfifo a2j
+j2a:
+	mkfifo j2a
+
+FIFOS = a2j j2a
+
+# all fuzzing dependencies
+FUZZ_DEPS = $(JAR) $(AFL) $(AFL_PROXY) $(FIFOS)
+
 # small fuzzing run to make sure everything works
-kick_the_tires: $(JAR) $(AFL) $(AFL_PROXY)
+kick_the_tires: $(FUZZ_DEPS)
 	rm -rf out
 	./fuzz.py --time=1 --folder=out --iterations=1 --afl-path=$(AFL_PATH) --seed=RFUZZ_longSeed.hwf -- \
 	--FIRRTL=benchmarks/TLI2C.fir --Harness=rfuzz --mux-toggle-coverage --Feedback=255

@@ -27,3 +27,4 @@ coveragePlot.png
 # fuzzing
 /seeds/
 /example/
+/out/

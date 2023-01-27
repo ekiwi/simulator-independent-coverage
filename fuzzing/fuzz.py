@@ -30,7 +30,7 @@ def main():
     parser.add_argument('-a', '--afl-path', type=str, default='~/AFL',
                         help="The path to the AFL folder")
     parser.add_argument('--seed', type=str, default="",
-                        help="Name of the seed in src/fuzzing/template_seeds/ to fuzz on")
+                        help="path to seed file")
 
     args = parser.parse_args(python_args.split()[1:])
 
@@ -52,8 +52,7 @@ def main():
             shutil.rmtree('seeds')
         os.mkdir('seeds')
         print("Copying file to seeds folder:", args.seed)
-        f = os.path.join(root_path, 'template_seeds', 'binary', args.seed)
-        shutil.copy(f, 'seeds')
+        shutil.copy(args.seed, 'seeds')
 
     # Performs ITERATIONS fuzzing runs on provided parameters
     for i in range(args.iterations):
@@ -72,7 +71,7 @@ def main():
         print("Calling AFLDriver with arguments: {SCALA_ARGS}\n".format(
             SCALA_ARGS=scala_args))
 
-        os.system("java -cp target/scala-2.13/rtl-fuzz-lab-assembly-0.1.jar fuzzing.FuzzLab {SCALA_ARGS} --Folder {FOLDER} &".format(
+        os.system("java -cp target/scala-2.12/rtl-fuzz-lab-assembly-0.1.jar fuzzing.FuzzLab {SCALA_ARGS} --Folder {FOLDER} &".format(
             SCALA_ARGS=scala_args, FOLDER=out_folder_run))
 
         os.system("sleep 13s")

@@ -16,3 +16,6 @@ Compile / scalaSource := baseDirectory.value / "src"
 Compile / resourceDirectory := baseDirectory.value / "src" / "resources"
 Test / scalaSource := baseDirectory.value / "test"
 Test / resourceDirectory := baseDirectory.value / "test" / "resources"
+
+// do not run tests before generating JAR
+assembly / test := {}

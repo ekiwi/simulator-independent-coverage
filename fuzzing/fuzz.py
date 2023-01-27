@@ -34,10 +34,6 @@ def main():
 
     args = parser.parse_args(python_args.split()[1:])
 
-
-    print("\nCreating jar file...\n")
-    os.system("sbt assembly")
-
     os.environ['AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES'] = '1'
     os.environ['AFL_SKIP_CPUFREQ'] = '1'
 

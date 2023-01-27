@@ -26,6 +26,10 @@ jobs:
         run: |
           cd firesim-coverage
           sbt ++${{ matrix.scala }} test
+      - name: Test Fuzzing
+        run: |
+          cd fuzzing
+          sbt ++${{ matrix.scala }} test
 
 
   benchmarks:

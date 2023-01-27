@@ -1,0 +1,29 @@
+/bin/
+/project/target
+/project/project
+/target/
+
+.project
+.classpath
+.settings
+.idea
+*.iml
+/*.bsp/
+
+/test_run_dir/
+
+# Visual Studio Code
+.bloop/
+.metals/
+.vscode/
+
+# Generated code
+input
+log
+*__pycache__/
+venv/
+coveragePlot.png
+
+# fuzzing
+/seeds/
+/example/

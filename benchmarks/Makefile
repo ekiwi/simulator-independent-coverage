@@ -1,3 +1,5 @@
+# overwirte this in order to speed up things (for kick the tires)
+HYPERFINE_OPTS :=
 LL := warn
 BUILD_DIR := build
 firrtl_jar = ../coverage/utils/bin/firrtl.jar
@@ -306,7 +308,7 @@ ifndef HYPERFINE
 	$(error "install hyperfine: https://github.com/sharkdp/hyperfine")
 endif
 	cd $(BUILD_DIR) && \
-	hyperfine --export-csv $(notdir $@) $(addprefix ./, $(filter %.bin, $(notdir $^)))
+	hyperfine $(HYPERFINE_OPTS) --export-csv $(notdir $@) $(addprefix ./, $(filter %.bin, $(notdir $^)))
 
 
 # run once for a quick test
@@ -336,7 +338,7 @@ ifndef HYPERFINE
 	$(error "install hyperfine: https://github.com/sharkdp/hyperfine")
 endif
 	cd $(BUILD_DIR) && \
-	hyperfine --export-csv $(notdir $@) $(addprefix ./, $(filter %.bin, $(notdir $^)))
+	hyperfine $(HYPERFINE_OPTS) --export-csv $(notdir $@) $(addprefix ./, $(filter %.bin, $(notdir $^)))
 
 
 COVERAGE_TXT = $(addprefix $(BUILD_DIR)/,$(addsuffix _coverage.txt, $(CIRCUIT_NAMES))) 

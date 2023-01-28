@@ -76,16 +76,20 @@ jobs:
           cd verilator-${{ matrix.version }}
           sudo make install
           verilator --version
-      - name: Compile Scala
-        run: cd coverage && sbt assembly
-      - name: Neuromorphic Processor - compile and run once
-        run: cd benchmarks && make NeuromorphicProcessor_run_once
-      - name: TL-RAM - compile and run once
-        run: cd benchmarks && make TLRAM_run_once
-      - name: serv - compile and run once
-        run: cd benchmarks && make serv_run_once
-      - name: RISCV-Mini - compile and run once
-        run: cd benchmarks && make riscv_mini_run_once
+      - name: Kick the Tires on figure7
+        run: cd benchmarks && make HYPERFINE_OPTS="--warmup=0 --runs=1" figure7
+      - name: Kick the Tires on table2
+        run: cd benchmarks && make HYPERFINE_OPTS="--warmup=0 --runs=1" table2
+      # - name: Compile Scala
+      #   run: cd coverage && sbt assembly
+      # - name: Neuromorphic Processor - compile and run once
+      #   run: cd benchmarks && make NeuromorphicProcessor_run_once
+      # - name: TL-RAM - compile and run once
+      #   run: cd benchmarks && make TLRAM_run_once
+      # - name: serv - compile and run once
+      #   run: cd benchmarks && make serv_run_once
+      # - name: RISCV-Mini - compile and run once
+      #   run: cd benchmarks && make riscv_mini_run_once
 
 
   fuzzing:

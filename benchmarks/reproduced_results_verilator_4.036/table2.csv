@@ -1,0 +1,5 @@
+Design | Cycles Executed | Run Time | # Line | # Toggle
+riscv-mini | 129,883 | 2.36s | 190 | 3,984
+TLRAM | 816,473 | 0.94s | 9 | 2,571
+serv-chisel | 828,931 | 0.65s | 80 | 656
+NeuroProc | 53,455,204 | 24.08s | 798 | 4,146

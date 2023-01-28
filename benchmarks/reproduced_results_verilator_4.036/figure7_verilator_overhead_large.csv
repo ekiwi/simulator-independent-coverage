@@ -1,0 +1,5 @@
+Benchmark, Toggle Native, Toggle FIRRTL, All FIRRTL
+rv-mini, 285.66, 209.28, 232.99
+serv, 411.08, 324.96, 367.39
+TLRAM, 1214.46, 977.12, 1021.02
+Neuro, 341.37, 350.73, 428.52

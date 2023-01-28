@@ -23,6 +23,9 @@ def plot_json(do_average, json_paths, csv, plt_file):
     for x, y, lbl in plot_data:
         plt.step(x, y, where='post', label=lbl)
 
+    if csv is not None:
+        write_csv(plot_data, csv)
+
     # Configure and show plot
     plt.title("Coverage Over Time")
     plt.ylabel("Cumulative coverage %")
@@ -43,6 +46,32 @@ def plot_json(do_average, json_paths, csv, plt_file):
     else:
         plt.savefig(plt_file)
 
+
+# translate directory name to CSV headers
+_headers = {
+    "i2c-line-cov": ["line-x", "line"],
+    "i2c-mux-toggle": ["mux-x", "mux"],
+    "i2c-mux-and-line-cov": ["mux-line-x", "mux + line"],
+}
+
+def write_csv(plot_data, csv):
+    # write header
+    labels = [e[2].split()[-1] for e in plot_data]
+    header = []
+    for lbl in labels:
+        header += _headers[lbl]
+    print(", ".join(header), file=csv)
+
+    # write data
+    max_len = max(len(e[0]) for e in plot_data)
+    for ii in range(max_len):
+        row = []
+        for e in plot_data:
+            if len(e[0]) <= ii:
+                row += ["", ""]
+            else:
+                row += [f"{e[0][ii]}", f"{e[1][ii]}",]
+        print(", ".join(row), file=csv)
 
 
 """Gets plotting data from JSON files found recursively at each path in JSON_PATHS.

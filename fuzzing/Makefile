@@ -19,6 +19,7 @@ $(AFL_PROXY): afl-proxy/afl-proxy.c afl-proxy/afl-proxy.h
 # Scala JAR that contains the instrumentation and fuzzing adapter code
 SCALA_SRC = $(shell find ../coverage/src -type f) $(shell find src -type f)
 JAR = target/scala-2.12/rtl-fuzz-lab-assembly-0.1.jar
+COVERAGE = java -cp $(JAR) fuzzing.FuzzLab 
 
 $(JAR): $(SCALA_SRC)
 	sbt assembly
@@ -35,6 +36,8 @@ FIFOS = a2j j2a
 # all fuzzing dependencies
 FUZZ_DEPS = $(JAR) $(AFL) $(AFL_PROXY) $(FIFOS)
 
+# run fuzzer with different coverage
+CONFIGS = i2c-mux-toggle i2c-line-cov i2c-mux-and-line-cov
 
 i2c-mux-toggle: $(FUZZ_DEPS)
 	rm -rf $@
@@ -51,7 +54,23 @@ i2c-mux-and-line-cov: $(FUZZ_DEPS)
 	./fuzz.py --time=$(TIME_MIN) --folder=$@ --iterations=$(REPS) --afl-path=$(AFL_PATH) --seed=RFUZZ_longSeed.hwf -- \
 	--FIRRTL=benchmarks/TLI2C.fir --Harness=rfuzz --line-coverage --mux-toggle-coverage --Feedback=255 --Directed
 
-figure10: i2c-mux-toggle i2c-line-cov i2c-mux-and-line-cov
+# analyze fuzzer generated inputs, all using line coverage
+%.out/coverage.json: %.out $(FUZZ_DEPS)
+	$(COVERAGE) --analysis --Folder=$(dir $@) --FIRRTL=benchmarks/TLI2C.fir --Harness=rfuzz --line-coverage --Feedback=255 --Directed
+
+
+# the number of coverage JSONs depends on the repetitions
+REPS_MINUS_ONE = $(shell echo ${REPS}-1 | bc)
+OUT_SEQ = $(shell seq 0 $(REPS_MINUS_ONE))
+OUTS = $(addsuffix .out, $(OUT_SEQ))
+ALL_COVERAGE_DIRS = $(addprefix i2c-mux-toggle/, $(OUTS)) $(addprefix i2c-line-cov/, $(OUTS)) $(addprefix i2c-mux-and-line-cov/, $(OUTS))
+ALL_COVERAGE_JSONS = $(addsuffix /coverage.json, $(ALL_COVERAGE_DIRS))
+
+fuzzing.csv fuzzing.png: $(ALL_COVERAGE_JSONS)
+	./plot_coverage.py --do-average --plot-file=fuzzing.png --csv=fuzzing.csv $(CONFIGS)
+
+
+figure10: fuzzing.csv
 	echo "TODO"
 
 

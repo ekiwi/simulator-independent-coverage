@@ -28,3 +28,14 @@ coveragePlot.png
 /seeds/
 /example/
 /out/
+
+
+# plotting output
+fuzzing.csv
+fuzzing.png
+
+# fuzzing output
+i2c-line-cov/
+i2c-mux-and-line-cov/
+i2c-mux-toggle/
+

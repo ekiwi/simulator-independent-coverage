@@ -1,3 +1,7 @@
+# change the time and repetition to make things faster
+TIME_MIN := 20
+REPS := 5
+
 # our fork of AFL
 AFL_PATH := ../ext/afl
 AFL = $(AFL_PATH)/afl-fuzz
@@ -31,10 +35,24 @@ FIFOS = a2j j2a
 # all fuzzing dependencies
 FUZZ_DEPS = $(JAR) $(AFL) $(AFL_PROXY) $(FIFOS)
 
-# small fuzzing run to make sure everything works
-kick_the_tires: $(FUZZ_DEPS)
-	rm -rf out
-	./fuzz.py --time=1 --folder=out --iterations=1 --afl-path=$(AFL_PATH) --seed=RFUZZ_longSeed.hwf -- \
-	--FIRRTL=benchmarks/TLI2C.fir --Harness=rfuzz --mux-toggle-coverage --Feedback=255
 
-.PHONY: kick_the_tires
+i2c-mux-toggle: $(FUZZ_DEPS)
+	rm -rf $@
+	./fuzz.py --time=$(TIME_MIN) --folder=$@ --iterations=$(REPS) --afl-path=$(AFL_PATH) --seed=RFUZZ_longSeed.hwf -- \
+	--FIRRTL=benchmarks/TLI2C.fir --Harness=rfuzz --mux-toggle-coverage --Feedback=255 --Directed
+
+i2c-line-cov: $(FUZZ_DEPS)
+	rm -rf $@
+	./fuzz.py --time=$(TIME_MIN) --folder=$@ --iterations=$(REPS) --afl-path=$(AFL_PATH) --seed=RFUZZ_longSeed.hwf -- \
+	--FIRRTL=benchmarks/TLI2C.fir --Harness=rfuzz --line-coverage --Feedback=255 --Directed
+
+i2c-mux-and-line-cov: $(FUZZ_DEPS)
+	rm -rf $@
+	./fuzz.py --time=$(TIME_MIN) --folder=$@ --iterations=$(REPS) --afl-path=$(AFL_PATH) --seed=RFUZZ_longSeed.hwf -- \
+	--FIRRTL=benchmarks/TLI2C.fir --Harness=rfuzz --line-coverage --mux-toggle-coverage --Feedback=255 --Directed
+
+figure10: i2c-mux-toggle i2c-line-cov i2c-mux-and-line-cov
+	echo "TODO"
+
+
+.PHONY: figure10

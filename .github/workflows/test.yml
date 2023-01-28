@@ -95,7 +95,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Kick the Tires on Fuzzing
-        run: cd fuzzing && make kick_the_tires
+        run: cd fuzzing && make figure10 TIME_MIN=1 REPS=1
 
 
   # Sentinel job to simplify how we specify which checks need to pass in branch

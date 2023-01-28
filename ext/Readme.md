@@ -50,3 +50,41 @@ index 46a216c..377ce4e 100644
    return ret;
 
 ```
+
+
+# Verilator
+
+We obtained the source code of Verilator version 4.036 like this:
+```
+wget https://github.com/verilator/verilator/archive/refs/tags/v4.034.tar.gz
+```
+
+We then added a small manual patch in order to make it compile with a more
+modern BISON version:
+
+```{.diff}
+diff --git a/ext/verilator-4.034-src/src/verilog.y b/ext/verilator-4.034-src/src/verilog.y
+index d612356..565ede1 100644
+--- a/ext/verilator-4.034-src/src/verilog.y
++++ b/ext/verilator-4.034-src/src/verilog.y
+@@ -236,6 +236,19 @@ static void UNSUPREAL(FileLine* fileline) {
+ class AstSenTree;
+ %}
+ 
++// Bison 3.0 and newer
++BISONPRE_VERSION(3.0,%define parse.error verbose)
++
++
++// We run bison with the -d argument. This tells it to generate a
++// header file with token names. Old versions of bison pasted the
++// contents of that file into the generated source as well; newer
++// versions just include it.
++//
++// Since we run bison through ../bisonpre, it doesn't know the correct
++// header file name, so we need to tell it.
++BISONPRE_VERSION(3.7,%define api.header.include {"V3ParseBison.h"})
++
+ // When writing Bison patterns we use yTOKEN instead of "token",
+ // so Bison will error out on unknown "token"s.
+
+```

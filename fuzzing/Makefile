@@ -39,19 +39,28 @@ FUZZ_DEPS = $(JAR) $(AFL) $(AFL_PROXY) $(FIFOS)
 # run fuzzer with different coverage
 CONFIGS = i2c-mux-toggle i2c-line-cov i2c-mux-and-line-cov
 
-i2c-mux-toggle: $(FUZZ_DEPS)
-	rm -rf $@
-	./fuzz.py --time=$(TIME_MIN) --folder=$@ --iterations=$(REPS) --afl-path=$(AFL_PATH) --seed=RFUZZ_longSeed.hwf -- \
+# the number of fuzzer outputs depends on the number of reps
+REPS_MINUS_ONE = $(shell echo ${REPS}-1 | bc)
+OUT_SEQ = $(shell seq 0 $(REPS_MINUS_ONE))
+OUTS = $(addsuffix .out, $(OUT_SEQ))
+
+MUX_TOGGLE = $(addprefix i2c-mux-toggle/, $(OUTS))
+LINE_COV = $(addprefix i2c-line-cov/, $(OUTS))
+MUX_AND_LINE = $(addprefix i2c-mux-and-line-cov/, $(OUTS))
+
+$(MUX_TOGGLE): $(FUZZ_DEPS)
+	rm -rf i2c-mux-toggle
+	./fuzz.py --time=$(TIME_MIN) --folder=i2c-mux-toggle --iterations=$(REPS) --afl-path=$(AFL_PATH) --seed=RFUZZ_longSeed.hwf -- \
 	--FIRRTL=benchmarks/TLI2C.fir --Harness=rfuzz --mux-toggle-coverage --Feedback=255 --Directed
 
-i2c-line-cov: $(FUZZ_DEPS)
-	rm -rf $@
-	./fuzz.py --time=$(TIME_MIN) --folder=$@ --iterations=$(REPS) --afl-path=$(AFL_PATH) --seed=RFUZZ_longSeed.hwf -- \
+$(LINE_COV): $(FUZZ_DEPS)
+	rm -rf i2c-line-cov
+	./fuzz.py --time=$(TIME_MIN) --folder=i2c-line-cov --iterations=$(REPS) --afl-path=$(AFL_PATH) --seed=RFUZZ_longSeed.hwf -- \
 	--FIRRTL=benchmarks/TLI2C.fir --Harness=rfuzz --line-coverage --Feedback=255 --Directed
 
-i2c-mux-and-line-cov: $(FUZZ_DEPS)
-	rm -rf $@
-	./fuzz.py --time=$(TIME_MIN) --folder=$@ --iterations=$(REPS) --afl-path=$(AFL_PATH) --seed=RFUZZ_longSeed.hwf -- \
+$(MUX_AND_LINE): $(FUZZ_DEPS)
+	rm -rf i2c-mux-and-line-cov
+	./fuzz.py --time=$(TIME_MIN) --folder=i2c-mux-and-line-cov --iterations=$(REPS) --afl-path=$(AFL_PATH) --seed=RFUZZ_longSeed.hwf -- \
 	--FIRRTL=benchmarks/TLI2C.fir --Harness=rfuzz --line-coverage --mux-toggle-coverage --Feedback=255 --Directed
 
 # analyze fuzzer generated inputs, all using line coverage
@@ -60,10 +69,7 @@ i2c-mux-and-line-cov: $(FUZZ_DEPS)
 
 
 # the number of coverage JSONs depends on the repetitions
-REPS_MINUS_ONE = $(shell echo ${REPS}-1 | bc)
-OUT_SEQ = $(shell seq 0 $(REPS_MINUS_ONE))
-OUTS = $(addsuffix .out, $(OUT_SEQ))
-ALL_COVERAGE_DIRS = $(addprefix i2c-mux-toggle/, $(OUTS)) $(addprefix i2c-line-cov/, $(OUTS)) $(addprefix i2c-mux-and-line-cov/, $(OUTS))
+ALL_COVERAGE_DIRS = $(MUX_TOGGLE) $(LINE_COV) $(MUX_AND_LINE)
 ALL_COVERAGE_JSONS = $(addsuffix /coverage.json, $(ALL_COVERAGE_DIRS))
 
 fuzzing.csv fuzzing.png: $(ALL_COVERAGE_JSONS)
@@ -74,4 +80,10 @@ figure10: fuzzing.csv
 	echo "TODO"
 
 
-.PHONY: figure10
+clean: # does not actually clean external dependencies!
+	rm -rf i2c-mux-toggle
+	rm -rf i2c-line-cov
+	rm -rf i2c-mux-and-line-cov
+	rm -f fuzzing.png fuzzing.csv
+
+.PHONY: figure10 clean

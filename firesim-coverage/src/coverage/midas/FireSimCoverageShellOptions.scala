@@ -18,7 +18,7 @@ final class FireSimCoverageShellOptions extends RegisteredLibrary {
     new ShellOption[String](
       longOption = "cover-scan-chain-width",
       toAnnotationSeq = a => Seq(RunFirrtlTransformAnnotation(Dependency(CoverageScanChainPass)),
-        CoverageScanChainOptions(a.toInt, addBridge = true)),
+        CoverageScanChainOptions(a.toInt)),
       helpText = "replace all cover statements with hardware counters of <WIDTH> and a scan chain"
     ),
     new ShellOption[Unit](

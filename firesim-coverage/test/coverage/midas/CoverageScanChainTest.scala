@@ -32,7 +32,6 @@ class CoverageScanChainTest extends AnyFlatSpec with CompilerTest {
     // the cover chain ports will need to use an additional '_' because of the colliding register named `cover_chain_en`
     assert(chainInfo.prefix == "cover_chain_")
     assert(l.contains("input cover_chain__en : UInt<1>"))
-    assert(l.contains(s"input cover_chain__in : UInt<$width>"))
     assert(l.contains(s"output cover_chain__out : UInt<$width>"))
 
     // the submodules do not have a collision

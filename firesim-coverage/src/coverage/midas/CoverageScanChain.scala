@@ -14,12 +14,11 @@ import firrtl.passes.wiring.WiringTransform
 import firrtl.stage.Forms
 import firrtl.stage.TransformManager.TransformDependency
 import firrtl.transforms.{EnsureNamedStatements, PropagatePresetAnnotations}
-import midas.passes.fame.{FAMEChannelConnectionAnnotation, PipeChannel}
-import midas.widgets.SerializableBridgeAnnotation
+
 
 import scala.collection.mutable
 
-case class CoverageScanChainOptions(counterWidth: Int = 32, addBridge: Boolean = false) extends NoTargetAnnotation {
+case class CoverageScanChainOptions(counterWidth: Int = 32) extends NoTargetAnnotation {
   require(counterWidth > 0)
 }
 
@@ -55,7 +54,7 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
 
   override protected def execute(state: CircuitState): CircuitState = {
     // determine the counter width
-    val opts = state.annotations.collect { case a: CoverageScanChainOptions => a }
+    val opts = state.annotations.collect { case a: CoverageScanChainOptions => a }.distinct
     if(opts.isEmpty) {
       logger.info("[CoverageScanChainPass] no options annotation found, skipping...")
       return state
@@ -77,17 +76,11 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     val anno = createChainAnnotation(main, infos, opt)
 
 
-    // we generate an extmodule for the bridge
-    val (bridgeMod, bridgeAnnos) = if(opt.addBridge) {
-      genBridgeModule(c, opt.counterWidth, anno.covers)
-    } else {
-      (None, List())
-    }
-
-    val modules = bridgeMod ++: modulesAndInfoAndAnnos.map(_._1)
+    // extract modules
+    val modules = modulesAndInfoAndAnnos.map(_._1)
     val circuit = state.circuit.copy(modules = modules)
 
-    CircuitState(circuit, anno +: bridgeAnnos ++: annos ++: state.annotations)
+    CircuitState(circuit, anno +: annos ++: state.annotations)
   }
 
   private def createChainAnnotation(
@@ -114,49 +107,6 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
   private val BridgeOutPort = "cover_out"
   private val BridgeWidgetClass = "coverage.midas.CoverageBridgeModule"
 
-  private def genBridgeModule(c: CircuitTarget, counterWidth: Int, covers: List[String]): (Option[ir.DefModule], List[Annotation]) = {
-    val moduleName = "CoverageBridge"
-    val m = c.module(moduleName)
-    val key = CoverageBridgeKey(counterWidth, covers)
-    val bridgeAnno = SerializableBridgeAnnotation(m, List(BridgeEnPort, BridgeOutPort), BridgeWidgetClass, Some(key))
-    val pipeChannel = PipeChannel(1)
-    val enChannel = FAMEChannelConnectionAnnotation(BridgeEnPort, pipeChannel, Some(m.ref("clock")),
-      sinks= Some(List(m.ref(BridgeEnPort))), sources =None)
-    val outChannel = FAMEChannelConnectionAnnotation(BridgeOutPort, pipeChannel, Some(m.ref("clock")),
-      sinks=None, sources = Some(List(m.ref(BridgeOutPort))))
-    val ports = List(
-      ir.Port(ir.NoInfo, "clock", ir.Input, ir.ClockType),
-      ir.Port(ir.NoInfo, BridgeEnPort, ir.Output, Utils.BoolType),
-      ir.Port(ir.NoInfo, BridgeOutPort, ir.Input, ir.UIntType(ir.IntWidth(counterWidth)))
-    )
-    val module = ir.ExtModule(ir.NoInfo, name = moduleName, ports=ports, defname=moduleName, params = List())
-    (Some(module), List(bridgeAnno, enChannel, outChannel))
-  }
-
-  private def genBridgeInstance(stmts: mutable.ArrayBuffer[ir.Statement], namespace: Namespace, counterWidth: Int,
-    enRef: ir.Reference, inRef: ir.Reference): ir.RefLikeExpression = {
-    val counterTpe = ir.UIntType(ir.IntWidth(counterWidth))
-    val tpe = ir.BundleType(List(
-      ir.Field("clock", Utils.to_flip(ir.Input), ir.ClockType),
-      ir.Field(BridgeEnPort, Utils.to_flip(ir.Output), Utils.BoolType),
-      ir.Field(BridgeOutPort, Utils.to_flip(ir.Input), counterTpe)
-    ))
-    val instName = namespace.newName(BridgeModuleName)
-    val inst = ir.DefInstance(ir.NoInfo, instName, BridgeModuleName, tpe)
-    val ref = ir.Reference(inst)
-    // instantiate
-    stmts.append(inst)
-    // TODO: this is a hack!
-    //val clockInput = ir.Reference("harnessClock", ir.ClockType, NodeKind)
-    val clockInput = ir.SubField(ir.Reference("RationalClockBridge"), "clocks_0", ir.ClockType)
-    // connect clock and enable signal
-    stmts.append(ir.Connect(ir.NoInfo, ir.SubField(ref, "clock", ir.ClockType), clockInput))
-    stmts.append(ir.DefNode(ir.NoInfo, enRef.name, ir.SubField(ref, BridgeEnPort, Utils.BoolType)))
-    stmts.append(ir.DefNode(ir.NoInfo, inRef.name, ir.UIntLiteral(0, counterTpe.width)))
-    // return out ref
-    ir.SubField(ref, BridgeOutPort, counterTpe)
-  }
-
   private case class ModuleInfo(name: String, prefix: String, covers: List[String], instances: List[InstanceKey])
   private def insertChain(
     c: CircuitTarget,
@@ -167,23 +117,28 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     case e: ir.ExtModule => (e, None, List())
     case mod: ir.Module =>
       val isTop = mod.name == c.name
-      val hasBridge = isTop && opt.addBridge
       val ctx = ModuleCtx(new Covers(), new Instances(), prefixes, opt.counterWidth)
+      val namespace = Namespace(mod)
+
       // we first find and remove all cover statements and change the port definition of submodules
       val removedCovers = findCoversAndModifyInstancePorts(mod.body, ctx)
-      val scanChainPorts = getScanChainPorts(prefixes(mod.name), opt.counterWidth)
+      val scanChainPorts = getScanChainPorts(prefixes(mod.name), opt.counterWidth, isTop)
       val portRefs = scanChainPorts.map(ir.Reference(_))
-      val refs = if(hasBridge) { portRefs.map(_.copy(kind=NodeKind)) } else { portRefs }
-      refs match {
+
+      // in the toplevel module we do not have a `in` port, but a constant zero node instead
+      val (ports, zeroStmt) = if(isTop) {
+        val zeroValue = Utils.getGroundZero(ir.UIntType(ir.IntWidth(opt.counterWidth)))
+        val zero = ir.DefNode(ir.NoInfo, namespace.newName("scan_chain_in_zero"), zeroValue)
+        val refs = Seq(portRefs.head, ir.Reference(zero).copy(flow = SourceFlow), portRefs.last)
+        (refs, Some(zero))
+      } else { (portRefs, None) }
+
+      // connect the scan chain
+      ports match {
         case Seq(enPort, inPort, outPort) =>
           val stmts = mutable.ArrayBuffer[ir.Statement]()
           val annos = mutable.ArrayBuffer[Annotation]()
-          val counterCtx = CounterCtx(c.module(mod.name), enPort, stmts, annos)
-
-          // if we are the toplevel module, we instantiate the bridge
-          val bridgeOutRef = if(hasBridge) {
-            genBridgeInstance(stmts, Namespace(mod), opt.counterWidth, enPort, inPort)
-          } else { ir.Reference("") }
+          val counterCtx = CounterCtx(c.module(mod.name), enPort, stmts, annos, namespace)
 
           // now we generate counters for all cover points we removed
           val counterOut =
@@ -196,16 +151,12 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
           )
 
           // finally we connect the outPort to the end of the chain
-          if(hasBridge) {
-            stmts.append(ir.Connect(ir.NoInfo, bridgeOutRef, instanceOut))
-          } else {
-            stmts.append(ir.Connect(ir.NoInfo, outPort, instanceOut))
-          }
+          stmts.append(ir.Connect(ir.NoInfo, outPort, instanceOut))
 
           // we then add the counters and connection statements to the end of the module
-          val body = ir.Block(removedCovers, ir.Block(stmts.toSeq))
+          val body = ir.Block(zeroStmt ++: removedCovers +: stmts.toSeq)
           // add ports
-          val ports = mod.ports ++ (if(hasBridge) List() else scanChainPorts)
+          val ports = mod.ports ++ scanChainPorts
 
           // build the module info
           val covers = ctx.covers.map(_.name).toList
@@ -217,26 +168,36 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
       }
   }
 
-  private case class CounterCtx(m: ModuleTarget, en: ir.Expression, stmts: mutable.ArrayBuffer[ir.Statement], annos: mutable.ArrayBuffer[Annotation])
+  private case class CounterCtx(m: ModuleTarget, en: ir.Expression, stmts: mutable.ArrayBuffer[ir.Statement], annos: mutable.ArrayBuffer[Annotation], namespace: Namespace)
 
   private def generateCounter(ctx: CounterCtx, cover: ir.Verification, prev: ir.Expression): ir.Expression = {
     assert(cover.op == ir.Formal.Cover)
+    val info = cover.info
+
     // we replace the cover statement with a register of the same name (the name is now available!)
     val init = Utils.getGroundZero(prev.tpe.asInstanceOf[ir.UIntType])
-    val regRef = ir.Reference(cover.name, prev.tpe, RegKind, UnknownFlow)
+    // counter register
+    val reg = ir.DefRegister(info, cover.name, prev.tpe, cover.clk, Utils.False(), init)
+    ctx.stmts.append(reg)
+    val regRef = ir.Reference(reg).copy(flow = SourceFlow)
 
+    // create a node for the cover condition
+    val coveredNode = ir.DefNode(info, ctx.namespace.newName(s"${cover.name}_cond"), Utils.and(cover.en, cover.pred))
+    ctx.stmts.append(coveredNode)
     // we increment the counter when condition is true
-    val covered = Utils.and(cover.en, cover.pred)
-    val inc = Builder.add(regRef, covered)
+    val covered = ir.Reference(coveredNode).copy(flow=SourceFlow)
+    // create conditional increment node
+    val incNode = ir.DefNode(info, ctx.namespace.newName(s"${cover.name}_inc"), Builder.add(regRef, covered))
+    ctx.stmts.append(incNode)
+    val inc = ir.Reference(incNode).copy(flow=SourceFlow)
+
     // we need to check for overflow
     val willOverflow = Builder.reduceAnd(regRef)
     // we increment the counter when it is not being reset and the chain is not enabled
     val update = Utils.mux(ctx.en, prev, Utils.mux(willOverflow, regRef, inc))
 
-    // counter register
-    val reg = ir.DefRegister(cover.info, cover.name, prev.tpe, cover.clk, Utils.False(), init)
-    ctx.stmts.append(reg)
-    val con = ir.Connect(cover.info, ir.Reference(reg), update)
+    // register update
+    val con = ir.Connect(info, regRef.copy(flow = SinkFlow), update)
     ctx.stmts.append(con)
     val presetAnno = MakePresetRegAnnotation(ctx.m.ref(reg.name))
     ctx.annos.append(presetAnno)
@@ -302,8 +263,11 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     PortSuffixes.map(prefix + "_" + _).forall(n => !namespace.contains(n))
   }
 
-  private def getScanChainPorts(prefix: String, width: BigInt): Seq[ir.Port] = {
-    PortSuffixes.zip(Seq(BigInt(1), width, width)).zip(Seq(true, true, false)).map { case ((suffix, w), isInput) =>
+  private def getScanChainPorts(prefix: String, width: BigInt, isTop: Boolean = false): Seq[ir.Port] = {
+    val allPorts =  PortSuffixes.zip(Seq(BigInt(1), width, width)).zip(Seq(true, true, false))
+    // the toplevel module does not have an in port
+    val ports = if(isTop) allPorts.filterNot(_._1._1 == "in") else allPorts
+    ports.map { case ((suffix, w), isInput) =>
       val dir = if (isInput) ir.Input else ir.Output
       ir.Port(ir.NoInfo, prefix + "_" + suffix, dir, ir.UIntType(ir.IntWidth(w)))
     }

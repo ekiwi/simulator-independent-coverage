@@ -73,14 +73,25 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     val infos = modulesAndInfoAndAnnos.flatMap(_._2)
     val annos = modulesAndInfoAndAnnos.flatMap(_._3)
     val main = c.module(c.name)
-    val anno = createChainAnnotation(main, infos, opt)
+    val chainAnno = createChainAnnotation(main, infos, opt)
+    val bridgeAnnos = createBridgeAnnos(main.name, prefixes(main.name))
 
 
     // extract modules
     val modules = modulesAndInfoAndAnnos.map(_._1)
     val circuit = state.circuit.copy(modules = modules)
 
-    CircuitState(circuit, anno +: annos ++: state.annotations)
+    CircuitState(circuit, chainAnno +: annos ++: bridgeAnnos ++: state.annotations)
+  }
+
+  private def createBridgeAnnos(mainName: String, mainPrefix: String): AnnotationSeq = {
+    val mainTarget = CircuitTarget(mainName).module(mainName)
+
+    // `en` toplevel input
+    //FAMEChannelConnectionAnnotation
+
+
+    ???
   }
 
   private def createChainAnnotation(
@@ -102,9 +113,6 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
       info.covers.map(prefix + _) ++ info.instances.flatMap(i => getCovers(i.module, prefix + i.name + ".", ii))
   }
 
-  private val BridgeModuleName = "CoverageBridge"
-  private val BridgeEnPort = "cover_en"
-  private val BridgeOutPort = "cover_out"
   private val BridgeWidgetClass = "coverage.midas.CoverageBridgeModule"
 
   private case class ModuleInfo(name: String, prefix: String, covers: List[String], instances: List[InstanceKey])

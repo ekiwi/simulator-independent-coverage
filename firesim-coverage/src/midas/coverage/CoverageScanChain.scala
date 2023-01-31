@@ -141,7 +141,9 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
       info.covers.map(prefix + _) ++ info.instances.flatMap(i => getCovers(i.module, prefix + i.name + ".", ii))
   }
 
-  private val BridgeWidgetClass = "coverage.midas.CoverageBridgeModule"
+  // it would be better to use something like `classOf[CoverageBridgeModule].getName` here, however that would give
+  // us a tighter coupling to FireSim making standalone unittest hard to impossible :(
+  private val BridgeWidgetClass = "midas.widgets.CoverageBridgeModule"
 
   private case class ModuleInfo(name: String, prefix: String, covers: List[String], instances: List[InstanceKey])
   private def insertChain(

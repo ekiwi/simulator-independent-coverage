@@ -33,7 +33,10 @@ case class CoverageScanChainInfo(target: ModuleTarget, prefix: String, width: In
   override def duplicate(n: ModuleTarget) = copy(target = n)
 }
 
-case class CoverageBridgeKey(counterWidth: Int, covers: List[String])
+case class CoverageBridgeKey(counterWidth: Int, covers: List[String]) {
+  override def toString =
+    s"CoverageBridgeKey(counterWidth = $counterWidth, covers = ${covers.length})"
+}
 
 /** Turns cover points into saturating hardware counters and builds a scan chain.
   * Should eventually be moved to midas/firesim.

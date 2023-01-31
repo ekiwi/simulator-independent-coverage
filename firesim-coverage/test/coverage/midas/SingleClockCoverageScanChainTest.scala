@@ -8,6 +8,7 @@ import coverage.tests.{ClockAnalysisExamples, LeanTransformSpec}
 import firrtl.annotations.CircuitTarget
 import firrtl.options.Dependency
 import logger.{LogLevel, LogLevelAnnotation, Logger}
+import midas.coverage.{CoverageScanChainInfo, CoverageScanChainOptions, CoverageScanChainPass}
 
 class SingleClockCoverageScanChainTest extends LeanTransformSpec(Seq(Dependency(LineCoveragePass), Dependency(CoverageStatisticsPass), Dependency(CoverageScanChainPass))) {
   behavior of "LineCoverage + CoverageScanChain"

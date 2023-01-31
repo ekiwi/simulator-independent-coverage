@@ -8,6 +8,7 @@ import coverage.tests.CompilerTest
 import firrtl._
 import firrtl.options.Dependency
 import firrtl.stage.RunFirrtlTransformAnnotation
+import midas.coverage.{CoverageScanChainInfo, CoverageScanChainOptions, CoverageScanChainPass}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class CoverageScanChainTest extends AnyFlatSpec with CompilerTest {

@@ -5,6 +5,7 @@ package coverage.midas
 
 import firrtl.options.{Dependency, RegisteredLibrary, ShellOption}
 import firrtl.stage.RunFirrtlTransformAnnotation
+import midas.coverage.{CoverageScanChainOptions, CoverageScanChainPass}
 
 final class FireSimCoverageShellOptions extends RegisteredLibrary {
   override def name = "FireSimCoverage"

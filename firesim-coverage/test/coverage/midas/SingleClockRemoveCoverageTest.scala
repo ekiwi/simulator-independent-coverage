@@ -8,6 +8,7 @@ import coverage.tests.{ClockAnalysisExamples, LeanTransformSpec}
 import firrtl.options.Dependency
 import firrtl.transforms.NoCircuitDedupAnnotation
 import logger.{LogLevel, LogLevelAnnotation, Logger}
+import midas.coverage.CoverageScanChainPass
 
 class SingleClockRemoveCoverageTest extends LeanTransformSpec(Seq(Dependency(LineCoveragePass), Dependency(CoverageStatisticsPass), Dependency(RemoveCoverPointsPass), Dependency(FindCoversToRemovePass), Dependency(CoverageScanChainPass))) {
   behavior of "LineCoverage with reduced cover points"

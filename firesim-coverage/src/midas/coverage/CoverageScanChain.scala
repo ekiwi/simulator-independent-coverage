@@ -2,9 +2,9 @@
 // released under BSD 3-Clause License
 // author: Kevin Laeufer <laeufer@cs.berkeley.edu>
 
-package coverage.midas
+package midas.coverage
 
-import coverage.{Coverage, Builder}
+import coverage.{Builder, Coverage}
 import firrtl._
 import firrtl.analyses.InstanceKeyGraph.InstanceKey
 import firrtl.annotations._
@@ -14,7 +14,8 @@ import firrtl.passes.wiring.WiringTransform
 import firrtl.stage.Forms
 import firrtl.stage.TransformManager.TransformDependency
 import firrtl.transforms.{EnsureNamedStatements, PropagatePresetAnnotations}
-
+import midas.passes.fame.{FAMEChannelConnectionAnnotation, PipeChannel}
+import midas.widgets.BridgeIOAnnotation
 
 import scala.collection.mutable
 
@@ -74,8 +75,8 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     val annos = modulesAndInfoAndAnnos.flatMap(_._3)
     val main = c.module(c.name)
     val chainAnno = createChainAnnotation(main, infos, opt)
-    val bridgeAnnos = createBridgeAnnos(main.name, prefixes(main.name))
-
+    val bridgeKey = CoverageBridgeKey(opt.counterWidth, chainAnno.covers)
+    val bridgeAnnos = createBridgeAnnos(main.name, prefixes(main.name), bridgeKey)
 
     // extract modules
     val modules = modulesAndInfoAndAnnos.map(_._1)
@@ -84,14 +85,41 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     CircuitState(circuit, chainAnno +: annos ++: bridgeAnnos ++: state.annotations)
   }
 
-  private def createBridgeAnnos(mainName: String, mainPrefix: String): AnnotationSeq = {
+  private def createBridgeAnnos(mainName: String, mainPrefix: String, key: CoverageBridgeKey): AnnotationSeq = {
     val mainTarget = CircuitTarget(mainName).module(mainName)
 
+    // TODO: this is a hack! We do not actually know what clock to use ...
+    val clockRef = mainTarget.ref("harnessClock")
+    val pipeChannel = PipeChannel(1)
+
     // `en` toplevel input
-    //FAMEChannelConnectionAnnotation
+    val enName = mainPrefix + "_en"
+    val enChannel = FAMEChannelConnectionAnnotation(
+      globalName = enName,
+      channelInfo = pipeChannel,
+      clock = Some(clockRef),
+      sinks = Some(Seq(mainTarget.ref(enName))),
+      sources = None
+    )
+    // `out` toplevel output
+    val outName = mainPrefix + "_out"
+    val outChannel = FAMEChannelConnectionAnnotation(
+      globalName = outName,
+      channelInfo = pipeChannel,
+      clock = Some(clockRef),
+      sinks = None,
+      sources = Some(List(mainTarget.ref(outName)))
+    )
 
+    // bridge annotation
+    val bridgeAnno = BridgeIOAnnotation(
+      target = mainTarget.ref(mainPrefix), // this is not a real port!
+      widgetClass = BridgeWidgetClass,
+      widgetConstructorKey = key,
+      channelNames = Seq(enChannel.globalName, outChannel.globalName)
+    )
 
-    ???
+    Seq(enChannel, outChannel, bridgeAnno)
   }
 
   private def createChainAnnotation(

@@ -89,7 +89,7 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     val mainTarget = CircuitTarget(mainName).module(mainName)
 
     // TODO: this is a hack! We do not actually know what clock to use ...
-    val clockRef = mainTarget.ref("buildtopClock")
+    val clockRef = mainTarget.ref("resetBridge_clock") // we try to piggy back on the reset bridge clock
     val pipeChannel = PipeChannel(1)
 
     // `en` toplevel input

@@ -219,11 +219,165 @@ firesim managerinit --platform f1
 Now we need to build an FPGA image for our instrumented Rocket and BOOM cores with different coverage counter
 widths in order to determine the utilization and `f_max` numbers.
 
-We are going to use a four core RocketChip and a single core BOOM SoC. Their build configurations can be found in
-`deploy/config_build_recipes.yaml`. We already enabled all of them to be built in `deploy/config_build.yaml`.
-Thus all you need to do to start building all designs is to run the following command: `firesim buildbitstream`
+We are going to use a four core RocketChip and a single core BOOM SoC.
+Please add their build configurations to `deploy/config_build_recipes.yaml`:
+
+```
+coverage_rocket_48:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW48_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_rocket_32:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW32_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_rocket_16:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW16_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+
+coverage_rocket_8:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW8_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_rocket_4:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW4_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_rocket_2:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW2_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_rocket_1:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW1_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_rocket_baseline:
+    DESIGN: FireSim
+    TARGET_CONFIG: WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
+    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_boom_48:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW48_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
+    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_boom_32:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW32_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
+    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_boom_16:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW16_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
+    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_boom_8:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW8_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
+    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_boom_4:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW4_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
+    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_boom_2:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW2_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
+    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_boom_1:
+    DESIGN: FireSim
+    TARGET_CONFIG: CCW1_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
+    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+
+coverage_boom_baseline:
+    DESIGN: FireSim
+    TARGET_CONFIG: WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
+    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
+    deploy_triplet: null
+    post_build_hook: null
+    metasim_customruntimeconfig: null
+    bit_builder_recipe: bit-builder-recipes/f1.yaml
+```
+
+Now add all the configs in `deploy/config_build.yaml` under `builds_to_run:` and comment out the 
+once that were already in the file.
+To start building all designs, run the following command: `firesim buildbitstream`
 You will be notified via email once the virtual machine with the RTL design is built.
 
 You should compare the utilization and frequency numbers to the ones presented in Figures 8 and 9 in the paper.
 In case there are any problems, you can find more info on building AFIs in
 [the FireSim documentation](https://docs.fires.im/en/1.15.1/Building-a-FireSim-AFI.html).
+
+
+### Linux Boot Speed
+
+We are still ironing out some bugs in order to allow you to reproduce the following claim:
+> We used our instrumented SoCs with 16-bit coverage counters to boot Linux and obtained line coverage results. For the RocketChip design the simulation executed 3.3B cycles in 50.4s (65 MHz). Scanning out the 8060 cover counts at the end of the simulation took 12ms. For the BOOM design the simulation executed 1.7B cycles in 42.6s (40 MHz). Scanning out the 12059 cover counts at the end of the simulation took 17ms.

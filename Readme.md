@@ -198,7 +198,7 @@ Running the `build-setup.sh` will take several minutes.
 Now we are ready to ran a simple "MetaSimulation" to check that things are working:
 ```{.sh}
 # in the firesim directory:
-source sourceme-f1-full.sh
+source sourceme-f1-manager.sh
 cd sim
 # generate FireSim RTL and Verilator simulation binary
 make TARGET_CONFIG=CCW32_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig verilator

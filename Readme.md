@@ -190,7 +190,7 @@ our extensions which adds support for the `cover` statement to `firesim`.
 git clone https://github.com/ekiwi/firesim.git
 cd firesim
 git checkout coverage-asplos2023 # make sure we are on the branch with our modifications
-./build-setup.sh # answer with `y` when asked whether you want to setup an unofficial version of FireSim
+./build-setup.sh
 ```
 
 Running the `build-setup.sh` will take several minutes.

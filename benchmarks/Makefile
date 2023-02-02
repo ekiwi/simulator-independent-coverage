@@ -323,6 +323,7 @@ endif
 # figure 7
 BENCH_RESULTS = $(addprefix $(BUILD_DIR)/,$(addsuffix _results.csv, $(CIRCUIT_NAMES)))
 $(BUILD_DIR)/figure7_verilator_overhead_small.csv $(BUILD_DIR)/figure7_verilator_overhead_large.csv: $(BENCH_RESULTS) figure7.py
+	mkdir -p $(BUILD_DIR)
 	./figure7.py
 
 figure7: $(BUILD_DIR)/figure7_verilator_overhead_small.csv $(BUILD_DIR)/figure7_verilator_overhead_large.csv

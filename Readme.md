@@ -57,6 +57,22 @@ you run an experiment.
 
 Please install `hyperfine` [following its documentation](https://github.com/sharkdp/hyperfine#installation).
 
+### Install Java and sbt
+
+To compile the FIRRTL passes that perform coverage instrumentation, you will need a JDK
+and [sbt](https://www.scala-sbt.org/index.html).
+
+On Ubuntu:
+
+```{.sh}
+sudo apt-get install default-jdk default-jre
+
+echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/apt/sources.list.d/sbt.list
+echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt_old.list
+curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | sudo apt-key add
+sudo apt-get update
+sudo apt-get install sbt
+```
 
 ### Table 2
 
@@ -75,7 +91,7 @@ Running the full version should take between 10 and 20min.
 
 Please compare the data in the CSV file with table 2 in the paper.
 Note that most numbers will be slightly off since our artifact is using
-a newer version of the firrtl compiler which might include different 
+a newer version of the firrtl compiler which might include different
 optimizations. The purpose of table 2 is to give the reader a feel for
 the benchmarks used. Please make sure that we accurately did that.
 
@@ -90,14 +106,20 @@ To re-create figure 7, please run the following commands:
 verilator --version # make sure it is 4.034
 cd benchmarks
 make figure7
-cat build/figure7.csv
 ```
 
 Running the full version should take between 1h and 2h.
 
-Please compare the data in the CSV file with figure 7 in the paper.
+```{.sh}
+cat build/figure7_verilator_overhead_small.csv
+cat build/figure7_verilator_overhead_large.csv
+```
+
+Please compare the data in the two CSV files with figure 7 in the paper.
+The first file corresponds to the left half plot, and the second file to the right half plot.
 Note that the CSV file contains percentage overhead in runtime when
 adding the instrumentation.
+
 Make sure that our main conclusion from Section 5.1 is supported by the numbers:
 > We find that in general our instrumentation causes the same or slightly less overhead compared to Verilator's built-in coverage.
 
@@ -131,6 +153,9 @@ that 5 times in order to compute the average coverage over time.
 Please open the `fuzzing.png` file and compare it to Figure 10. There will be some variation
 since fuzzing is a stochastic process. Also note that Figure 10 cuts of the y-axis
 bellow 70% while `fuzzing.png` shows the full y-axis.
+
+Make sure that our conclusion from Section 5.4 is supported by the plot:
+> Figure 10 shows that - in our particular case - there is little difference in the final results.
 
 ## FireSim Integration
 
@@ -367,7 +392,7 @@ coverage_boom_baseline:
     bit_builder_recipe: bit-builder-recipes/f1.yaml
 ```
 
-Now add all the configs in `deploy/config_build.yaml` under `builds_to_run:` and comment out the 
+Now add all the configs in `deploy/config_build.yaml` under `builds_to_run:` and comment out the
 once that were already in the file.
 To start building all designs, run the following command: `firesim buildbitstream`
 You will be notified via email once the virtual machine with the RTL design is built.

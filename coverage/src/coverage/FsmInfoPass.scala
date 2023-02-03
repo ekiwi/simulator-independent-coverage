@@ -240,7 +240,16 @@ private class ModuleScanner(localComponents: Map[String, EnumComponentAnnotation
     case other => other.foreachStmt(onStmt)
   }
 }
-private case class EnumReg(enumTypeName: String, regDef: ir.DefRegister, next: ir.Expression)
+private case class EnumReg(enumTypeName: String, regDef: ir.DefRegister, next: FStateExpr, atoms: Map[String, ir.Expression])
 
 
 // Small IR to Represent **F**SM next state expressions
+private sealed trait FExpr
+private case class FNot(e: FExpr) extends FExpr
+private case class FAnd(a: FExpr, b: FExpr) extends FExpr
+private case class FOr(a: FExpr, b: FExpr) extends FExpr
+private case class FAtom(name: String) extends FExpr
+private trait FStateExpr extends FExpr
+private case class FInState(name: String) extends FStateExpr
+private case class FIte(cond: FExpr, tru: FStateExpr, fal: FStateExpr) extends FStateExpr
+

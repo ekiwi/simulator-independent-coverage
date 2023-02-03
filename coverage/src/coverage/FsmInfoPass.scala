@@ -24,6 +24,8 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
   override def prerequisites: Seq[TransformDependency] = Forms.LowForm
   override def invalidates(a: Transform): Boolean = false
 
+  private val debug: Boolean = true
+
   override protected def execute(state: CircuitState): CircuitState = {
     val enums = state.annotations.collect { case a: EnumDefAnnotation => a.typeName -> a }.toMap
     val components = state.annotations.collect { case a : EnumComponentAnnotation => a }
@@ -45,6 +47,7 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
       if (localComponents.isEmpty) {
         List()
       } else {
+        if(debug) println(mod.serialize)
         val enumRegs = new ModuleScanner(localComponents).run(mod)
         enumRegs.map { case EnumReg(enumTypeName, regDef, next) =>
           analyzeFSM(c.module(mod.name), regDef, next, enums(enumTypeName).definition)
@@ -54,10 +57,19 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
   }
 
   private def analyzeFSM(module: ModuleTarget, regDef: ir.DefRegister, nextExpr: ir.Expression, states: Map[String, BigInt]): FsmInfoAnnotation = {
+    if(debug) println(s"Analyzing FSM in $module")
     val (resetState, next) = destructReset(nextExpr)
-    // println(s"Next: ${next.serialize}")
+    // if(debug) println(s"Next: ${next.serialize}")
     val allStates = states.values.toSet
-    val transitions = destructMux(next).flatMap { case (guard, nx) =>
+    val destructedMux = destructMux(next)
+    if(debug) {
+      println(s"Next:\n${next.serialize}")
+      println(s"Destructed:")
+      destructedMux.foreach { case (guard, nx) =>
+        println(s"When ${guard.serialize} ==> ${nx.serialize}")
+      }
+    }
+    val transitions = destructedMux.flatMap { case (guard, nx) =>
       val from = guardStates(guard, regDef.name, allStates).getOrElse(allStates)
       val to = nextStates(nx, regDef.name, allStates, from)
       from.flatMap(f => to.map(t => f -> t))
@@ -131,7 +143,7 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
       val symbols = findSymbols(other)
       if(symbols.contains(name)) {
         // throw new RuntimeException(s"failed to analyze:\n" + other.serialize)
-        // logger.warn("[FSM] over-approximating the states")
+        logger.warn("[FSM] over-approximating the states")
         Some(allStates)
       } else { None } // no states
   }
@@ -193,31 +205,33 @@ private class ModuleScanner(localComponents: Map[String, EnumComponentAnnotation
   /** resolves references to nodes (all wires should have been removed at this point)
    *  Ignores any subexpressions that do not actually contain references to the state register.
    * */
-  private def inlineComb(e: ir.Expression, stateReg: String): (ir.Expression, Boolean) = e match {
-    case r: ir.Reference if r.kind == firrtl.NodeKind =>
-      val (e, shouldInline) = inlineComb(connects(r.name), stateReg)
-      if(shouldInline) { (e, true) } else { (r, false) }
-    case r: ir.Reference if r.name == stateReg => (r, true)
-    // registers are always plain references, so any RefLikeExpression that gets here is not a state register
-    case r: ir.RefLikeExpression => (r, false)
-    case p : ir.DoPrim =>
-      val c = p.args.map(inlineComb(_, stateReg))
-      val shouldInline = c.exists(_._2)
-      if(shouldInline) { (p.copy(args = c.map(_._1)), true) } else { (p, false) }
-    case m @ ir.Mux(cond, tval, fval, tpe) =>
-      val c = Seq(cond, tval, fval).map(inlineComb(_, stateReg))
-      val shouldInline = c.exists(_._2)
-      if(shouldInline) {
-        (ir.Mux(c(0)._1, c(1)._1, c(2)._1, tpe), true)
-      } else { (m, false) }
-    case v@ ir.ValidIf(cond, value, tpe) =>
-      val c = Seq(cond, value).map(inlineComb(_, stateReg))
-      val shouldInline = c.exists(_._2)
-      if(shouldInline) {
-        (ir.ValidIf(c(0)._1, c(1)._1, tpe), true)
-      } else { (v, false) }
-    case l: ir.Literal => (l, false)
-    case other => throw new RuntimeException(s"Unexpected expression $other")
+  private def inlineComb(e: ir.Expression, stateReg: String): (ir.Expression, Boolean) = {
+    e match {
+      case r: ir.Reference if r.kind == firrtl.NodeKind =>
+        val (e, shouldInline) = inlineComb(connects(r.name), stateReg)
+        if(shouldInline) { (e, true) } else { (r, false) }
+      case r: ir.Reference if r.name == stateReg => (r, true)
+      // registers are always plain references, so any RefLikeExpression that gets here is not a state register
+      case r: ir.RefLikeExpression => (r, false)
+      case p : ir.DoPrim =>
+        val c = p.args.map(inlineComb(_, stateReg))
+        val shouldInline = c.exists(_._2)
+        if(shouldInline) { (p.copy(args = c.map(_._1)), true) } else { (p, false) }
+      case m @ ir.Mux(cond, tval, fval, tpe) =>
+        val c = Seq(cond, tval, fval).map(inlineComb(_, stateReg))
+        val shouldInline = c.exists(_._2)
+        if(shouldInline) {
+          (ir.Mux(c(0)._1, c(1)._1, c(2)._1, tpe), true)
+        } else { (m, false) }
+      case v@ ir.ValidIf(cond, value, tpe) =>
+        val c = Seq(cond, value).map(inlineComb(_, stateReg))
+        val shouldInline = c.exists(_._2)
+        if(shouldInline) {
+          (ir.ValidIf(c(0)._1, c(1)._1, tpe), true)
+        } else { (v, false) }
+      case l: ir.Literal => (l, false)
+      case other => throw new RuntimeException(s"Unexpected expression $other")
+    }
   }
   private def onStmt(s: ir.Statement): Unit = s match {
     case r: ir.DefRegister if localComponents.contains(r.name) => regDefs(r.name) = r
@@ -227,3 +241,6 @@ private class ModuleScanner(localComponents: Map[String, EnumComponentAnnotation
   }
 }
 private case class EnumReg(enumTypeName: String, regDef: ir.DefRegister, next: ir.Expression)
+
+
+// Small IR to Represent **F**SM next state expressions

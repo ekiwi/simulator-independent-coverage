@@ -3,13 +3,13 @@
     "class":"chisel3.experimental.EnumAnnotations$EnumDefAnnotation",
     "typeName":"CacheState",
     "definition":{
-      "Idle":0,
-      "ReadCache":1,
-      "WriteCache":2,
-      "WriteBack":3,
-      "WriteAck":4,
-      "RefillReady":5,
-      "Refill":6
+      "sIdle":0,
+      "sReadCache":1,
+      "sWriteCache":2,
+      "sWriteBack":3,
+      "sWriteAck":4,
+      "sRefillReady":5,
+      "sRefill":6
     }
   },
   {
@@ -21,16 +21,16 @@
     "class":"chisel3.experimental.EnumAnnotations$EnumDefAnnotation",
     "typeName":"MemArbiterState",
     "definition":{
-      "Idle":0,
-      "ICacheRead":1,
-      "DCacheRead":2,
-      "DCacheWrite":3,
-      "DCacheAck":4
+      "sIdle":0,
+      "sICacheRead":1,
+      "sDCacheRead":2,
+      "sDCacheWrite":3,
+      "sDCacheAck":4
     }
   },
   {
     "class":"chisel3.experimental.EnumAnnotations$EnumComponentAnnotation",
     "target":"TileTester.MemArbiter.state",
     "enumTypeName":"MemArbiterState"
-  },
+  }
 ]

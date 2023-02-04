@@ -48,8 +48,10 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
         List()
       } else {
         if(debug) println(mod.serialize)
+        // extract net info from module
+        val regNames = localComponents.keySet
+        val netData = new ModuleNetAnalyzer(regNames).run(mod)
         localComponents.map { case (name, anno) =>
-          val enumReg = new ModuleScanner(name).run(mod)
           analyzeFSM(c.module(mod.name), ???, ???, enums(anno.enumTypeName).definition)
         }.toList
       }
@@ -189,135 +191,37 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
   }
 }
 
-/** extracts information about a single state machine register */
-private class ModuleScanner(stateRegName: String) {
-
-  def run(mod: ir.Module): EnumReg = {
-    // phase #1: generate "SSA" lookup table + analyze which expressions depend on the state register
 
 
-    // analyze statements
-    onStmt(mod.body)
-
-    EnumReg(nameToExpr(stateRegName).asInstanceOf[FStateExpr], atoms.toMap)
+/** Contains the right-hand-side expression and transitive register dependency for a single node or register next expression. */
+private case class ConnectionInfo(expr: ir.Expression, registerDependencies: Set[String])
+/** Contains information about all nodes and register next connections in the circuit */
+private case class ModuleNetData(con: Map[String, ConnectionInfo])
+private class ModuleNetAnalyzer(registers: Set[String]) {
+  private val con = mutable.HashMap[String, ConnectionInfo]()
+  def run(mod: ir.Module): ModuleNetData = {
+    mod.foreachStmt(onStmt)
+    ModuleNetData(con.toMap)
   }
-
-
-  // Phase #1
-  private val connects = mutable.HashMap[String, ir.Expression]()
-  private val dependsOnState = mutable.HashSet[String]()
-  
-
-
-  /** keeps track of nodes and the expressions they point to, but only if they are related to the state register */
-  private val nameToExpr = mutable.HashMap[String, FExpr]()
-  private def onStmt(s: ir.Statement): Unit = s match {
-    case r: ir.DefRegister if r.name == stateRegName =>
-      println(s"TODO: analyze reset: ${r.serialize}")
-    case ir.Connect(_, loc, expr) if loc.serialize == stateRegName =>
-      nameToExpr(loc.serialize) = convertExpr(expr).get
+  def onStmt(s: ir.Statement): Unit = s match {
+    case ir.Connect(_, ir.Reference(name, _, kind, _), expr) if kind == RegKind =>
+      // register do not induce any dependencies, since we are only looking at a single cycle!
+      con(name) = ConnectionInfo(expr, Set())
+    case ir.Connect(_, loc, expr) =>
+      con(loc.serialize) = ConnectionInfo(expr, findDeps(expr))
     case ir.DefNode(_, name, expr) =>
-      convertExpr(expr) match {
-        case Some(value) => nameToExpr(name) = value
-        case None =>
+      con(name) = ConnectionInfo(expr, findDeps(expr))
+    case other => other.foreachStmt(onStmt)
+  }
+  def findDeps(e: ir.Expression): Set[String] = e match {
+    case ir.Reference(name, _, _, _) =>
+      if(registers.contains(name)) { Set(name) } else {
+        con.get(name).map(_.registerDependencies).getOrElse(Set())
       }
-    case other =>
-      other.foreachStmt(onStmt)
+    case _ : ir.UIntLiteral | _ : ir.SIntLiteral => Set()
+    case prim : ir.DoPrim => prim.args.map(findDeps).reduce(_ | _)
+    case ir.Mux(cond, tval, fval, _) => Seq(cond, tval, fval).map(findDeps).reduce(_ | _)
+    case ir.ValidIf(cond, value, _) => Seq(cond, value).map(findDeps).reduce(_ | _)
+    case _ : ir.RefLikeExpression => Set() // ref-like but not a reference => cannot be a scalar register
   }
-
-  private val atoms = mutable.HashMap[String, ir.Expression]()
-
-  private def convertNext(e: ir.Expression)
-
-  private def convertExpr(e: ir.Expression): Option[FExpr] = e match {
-    case r: ir.Reference if r.name == stateRegName =>
-      assert(firrtl.bitWidth(r.tpe) == 1, "should never get here")
-      // a 1-bit state register can be used as a boolean expression instead of (state == 1)
-      Some(FInState(1))
-    case r: ir.Reference => nameToExpr.get(r.name) // resolve other references
-    case ir.Mux(cond, tval, fval, _) => (convertExpr(tval), convertExpr(fval)) match {
-      case (Some(tru), Some(fals)) =>
-        val ite = FIte(convertExpr(cond).get, tru.asInstanceOf[FStateExpr], fals.asInstanceOf[FStateExpr])
-        Some(ite)
-      case (None, None) => None
-      case (a, b) => throw new NotImplementedError(s"TODO: deal with this: $a (${tval.serialize}) $b (${fval.serialize})")
-    }
-    case ir.DoPrim(PrimOps.Eq, Seq(r: ir.Reference, c: ir.UIntLiteral), _, _) if r.name == stateRegName =>
-      Some(FInState(c.value)) // state == num
-    case ir.DoPrim(PrimOps.Eq, Seq(c: ir.UIntLiteral, r: ir.Reference), _, _) if r.name == stateRegName =>
-      Some(FInState(c.value)) // num == state
-    case ir.DoPrim(PrimOps.Neq, Seq(r: ir.Reference, c: ir.UIntLiteral), _, _) if r.name == stateRegName =>
-      Some(FNot(FInState(c.value))) // state =/= num
-    case ir.DoPrim(PrimOps.Neq, Seq(c: ir.UIntLiteral, r: ir.Reference), _, _) if r.name == stateRegName =>
-      Some(FNot(FInState(c.value))) // num =/= state
-    case ir.DoPrim(PrimOps.Not, Seq(a), _, _) => convertExpr(a).map(FNot) // not(_)
-    case ir.DoPrim(PrimOps.And, Seq(aExpr, bExpr), _, _) => (convertExpr(aExpr), convertExpr(bExpr)) match {
-      case (Some(a), Some(b)) => Some(FAnd(a, b))
-      case (None, None) => None
-      case (Some(a), None) => Some(FAnd(a, toAtom(bExpr)))
-      case (None, Some(b)) => Some(FAnd(b, toAtom(aExpr)))
-    }
-    case ir.DoPrim(PrimOps.Or, Seq(aExpr, bExpr), _, _) => (convertExpr(aExpr), convertExpr(bExpr)) match {
-      case (Some(a), Some(b)) => Some(FOr(a, b))
-      case (None, None) => None
-      case (Some(a), None) => Some(FOr(a, toAtom(bExpr)))
-      case (None, Some(b)) => Some(FOr(b, toAtom(aExpr)))
-    }
-    case other => None
-  }
-
-
-  private def toAtom(e: ir.Expression): FAtom = FAtom(s"TODO: ${e.serialize}")
-
-  /***/
-
-
-
-
-
-  /** resolves references to nodes (all wires should have been removed at this point)
-   *  Ignores any subexpressions that do not actually contain references to the state register.
-   * */
-//  private def inlineComb(e: ir.Expression, stateReg: String): (ir.Expression, Boolean) = {
-//    e match {
-//      case r: ir.Reference if r.kind == firrtl.NodeKind =>
-//        val (e, shouldInline) = inlineComb(connects(r.name), stateReg)
-//        if(shouldInline) { (e, true) } else { (r, false) }
-//      case r: ir.Reference if r.name == stateReg => (r, true)
-//      // registers are always plain references, so any RefLikeExpression that gets here is not a state register
-//      case r: ir.RefLikeExpression => (r, false)
-//      case p : ir.DoPrim =>
-//        val c = p.args.map(inlineComb(_, stateReg))
-//        val shouldInline = c.exists(_._2)
-//        if(shouldInline) { (p.copy(args = c.map(_._1)), true) } else { (p, false) }
-//      case m @ ir.Mux(cond, tval, fval, tpe) =>
-//        val c = Seq(cond, tval, fval).map(inlineComb(_, stateReg))
-//        val shouldInline = c.exists(_._2)
-//        if(shouldInline) {
-//          (ir.Mux(c(0)._1, c(1)._1, c(2)._1, tpe), true)
-//        } else { (m, false) }
-//      case v@ ir.ValidIf(cond, value, tpe) =>
-//        val c = Seq(cond, value).map(inlineComb(_, stateReg))
-//        val shouldInline = c.exists(_._2)
-//        if(shouldInline) {
-//          (ir.ValidIf(c(0)._1, c(1)._1, tpe), true)
-//        } else { (v, false) }
-//      case l: ir.Literal => (l, false)
-//      case other => throw new RuntimeException(s"Unexpected expression $other")
-//    }
-//  }
-
 }
-private case class EnumReg(next: FStateExpr, atoms: Map[String, ir.Expression])
-
-
-// Small IR to Represent **F**SM next state expressions
-private sealed trait FExpr
-private case class FNot(e: FExpr) extends FExpr
-private case class FAnd(a: FExpr, b: FExpr) extends FExpr
-private case class FOr(a: FExpr, b: FExpr) extends FExpr
-private case class FAtom(name: String) extends FExpr
-private trait FStateExpr extends FExpr
-private case class FInState(name: BigInt) extends FStateExpr
-private case class FIte(cond: FExpr, tru: FStateExpr, fal: FStateExpr) extends FStateExpr
-

@@ -283,7 +283,7 @@ Note, the reported utilization numbers will differ somewhat from the pubished ve
 
 **Kick the Tires**: Skip unless using the pre-compiled bitstreams. 
 
-To expedite running our linux boot, we've pre-compiled compiled a Buildroot linux distribution whose `init` process should call `poweroff` once it starts running. This image was fetched from `S3` when you setup your FireSim repo and can be found in `firesim/deploy/workloads/linux-poweroff/`. 
+To smooth over this process, we've pre-compiled a Buildroot linux distribution whose `init` process should call `poweroff` once it starts running. This image was fetched from `S3` when you setup your FireSim repo and can be found in `firesim/deploy/workloads/linux-poweroff/`. 
 
 Full details about running simulations under Firesim can be found [here](https://docs.fires.im/en/1.15.1/Running-Simulations-Tutorial/Running-a-Single-Node-Simulation.html). For your convenience, we've modified the default runtime configuration file (`firesim/deploy/config_runtime.yaml`) to boot the provided buildroot linux distribution on a 16-bit coverage counter Rocket-based design. 
 
@@ -294,7 +294,7 @@ source sourceme-f1-manager.sh
 # Requests an FPGA instance
 firesim launchrunfarm
 
-# Programs the FPGA with our desired bitsream
+# Programs the FPGA with our desired bitstream
 firesim infrasetup
 
 # Runs the simulation
@@ -302,7 +302,7 @@ firesim runworkload
 
 ```
 
-At this point the `firesim` manager program should producing a running log of simulator status:
+At this point the `firesim` manager should produce a running log showing the current status of your simulation:
 
 ```
 FireSim Simulation Status @ 2023-02-05 00:26:52.668218
@@ -334,7 +334,7 @@ Summary
 When the simulation is complete, the manager will copy back your results to:
 `firesim/results-workload/<date>-linux-poweroff/linux-poweroff0/`
 
-Of note, is the 'uartlog' which will have the console output from linux boot as well as the simulation runtime statistics. The tail of this log
+Of note is the 'uartlog' which will have the console output from linux boot as well as the simulation runtime statistics. The tail of this log
 should look as follows, with only small changes in wallclock-related times. 
 
 ```
@@ -363,7 +363,7 @@ FMR: 1.39
 Note: The latter three figures are based on the fastest target clock.  
 ```
 
-Feel free to update `firesim/deploy/config_runtime.yaml` to run against one of the other designs, by modifying the  `default_hw_config` field to specify one of the other designs provided in `firesim/deploy/config_hwdb.yaml`. For each simulation, make sure to run both:
+Feel free to update `firesim/deploy/config_runtime.yaml` to run against one of the other designs, by modifying the `default_hw_config` field to specify one of the other HWDB entries in `firesim/deploy/config_hwdb.yaml`. For each simulation, be sure to run both:
 ```
 firesim infrasetup
 firesim runworkload
@@ -377,5 +377,4 @@ firesim terminaterunfarm
 
 Then, double check in your AWS console that the instance has been terminated. 
 
-We are still ironing out some bugs in order to allow you to reproduce the following claim:
-> We used our instrumented SoCs with 16-bit coverage counters to boot Linux and obtained line coverage results. For the RocketChip design the simulation executed 3.3B cycles in 50.4s (65 MHz). Scanning out the 8060 cover counts at the end of the simulation took 12ms. For the BOOM design the simulation executed 1.7B cycles in 42.6s (40 MHz). Scanning out the 12059 cover counts at the end of the simulation took 17ms.
+Unfortunately, due to a bug in Vivado versions 2021.1 and 2021.2 (the only versions readily available on EC2 at time of writing), we were unable to rebuild BOOM images using a modern version of FireSim. The old builds should be reproducible with a local installation of Vivado 2018.3. 

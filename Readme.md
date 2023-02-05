@@ -245,9 +245,10 @@ Now we need to build an FPGA image for our instrumented Rocket and BOOM cores wi
 widths in order to determine the utilization and `f_max` numbers.
 
 We are going to use a four core RocketChip and a single core BOOM SoC.
-Please add their build configurations to `deploy/config_build_recipes.yaml`:
+We've added build recipes for you in `deploy/config_build_recipes.yaml`. Instrumented recipes take the form:
 
 ```
+# 48-bit variant
 coverage_rocket_48:
     DESIGN: FireSim
     TARGET_CONFIG: CCW48_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
@@ -256,153 +257,125 @@ coverage_rocket_48:
     post_build_hook: null
     metasim_customruntimeconfig: null
     bit_builder_recipe: bit-builder-recipes/f1.yaml
-
-coverage_rocket_32:
-    DESIGN: FireSim
-    TARGET_CONFIG: CCW32_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
-    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config
-    deploy_triplet: null
-    post_build_hook: null
-    metasim_customruntimeconfig: null
-    bit_builder_recipe: bit-builder-recipes/f1.yaml
-
-coverage_rocket_16:
-    DESIGN: FireSim
-    TARGET_CONFIG: CCW16_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
-    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config
-    deploy_triplet: null
-    post_build_hook: null
-    metasim_customruntimeconfig: null
-
-coverage_rocket_8:
-    DESIGN: FireSim
-    TARGET_CONFIG: CCW8_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
-    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config
-    deploy_triplet: null
-    post_build_hook: null
-    metasim_customruntimeconfig: null
-    bit_builder_recipe: bit-builder-recipes/f1.yaml
-
-coverage_rocket_4:
-    DESIGN: FireSim
-    TARGET_CONFIG: CCW4_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
-    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config
-    deploy_triplet: null
-    post_build_hook: null
-    metasim_customruntimeconfig: null
-    bit_builder_recipe: bit-builder-recipes/f1.yaml
-
-coverage_rocket_2:
-    DESIGN: FireSim
-    TARGET_CONFIG: CCW2_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
-    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config
-    deploy_triplet: null
-    post_build_hook: null
-    metasim_customruntimeconfig: null
-    bit_builder_recipe: bit-builder-recipes/f1.yaml
-
-coverage_rocket_1:
-    DESIGN: FireSim
-    TARGET_CONFIG: CCW1_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
-    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config
-    deploy_triplet: null
-    post_build_hook: null
-    metasim_customruntimeconfig: null
-    bit_builder_recipe: bit-builder-recipes/f1.yaml
-
-coverage_rocket_baseline:
-    DESIGN: FireSim
-    TARGET_CONFIG: WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig
-    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config
-    deploy_triplet: null
-    post_build_hook: null
-    metasim_customruntimeconfig: null
-    bit_builder_recipe: bit-builder-recipes/f1.yaml
-
-coverage_boom_48:
-    DESIGN: FireSim
-    TARGET_CONFIG: CCW48_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
-    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
-    deploy_triplet: null
-    post_build_hook: null
-    metasim_customruntimeconfig: null
-    bit_builder_recipe: bit-builder-recipes/f1.yaml
-
-coverage_boom_32:
-    DESIGN: FireSim
-    TARGET_CONFIG: CCW32_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
-    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
-    deploy_triplet: null
-    post_build_hook: null
-    metasim_customruntimeconfig: null
-    bit_builder_recipe: bit-builder-recipes/f1.yaml
-
-coverage_boom_16:
-    DESIGN: FireSim
-    TARGET_CONFIG: CCW16_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
-    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
-    deploy_triplet: null
-    post_build_hook: null
-    metasim_customruntimeconfig: null
-    bit_builder_recipe: bit-builder-recipes/f1.yaml
-
-coverage_boom_8:
-    DESIGN: FireSim
-    TARGET_CONFIG: CCW8_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
-    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
-    deploy_triplet: null
-    post_build_hook: null
-    metasim_customruntimeconfig: null
-    bit_builder_recipe: bit-builder-recipes/f1.yaml
-
-coverage_boom_4:
-    DESIGN: FireSim
-    TARGET_CONFIG: CCW4_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
-    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
-    deploy_triplet: null
-    post_build_hook: null
-    metasim_customruntimeconfig: null
-    bit_builder_recipe: bit-builder-recipes/f1.yaml
-
-coverage_boom_2:
-    DESIGN: FireSim
-    TARGET_CONFIG: CCW2_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
-    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
-    deploy_triplet: null
-    post_build_hook: null
-    metasim_customruntimeconfig: null
-    bit_builder_recipe: bit-builder-recipes/f1.yaml
-
-coverage_boom_1:
-    DESIGN: FireSim
-    TARGET_CONFIG: CCW1_WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
-    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
-    deploy_triplet: null
-    post_build_hook: null
-    metasim_customruntimeconfig: null
-    bit_builder_recipe: bit-builder-recipes/f1.yaml
-
-coverage_boom_baseline:
-    DESIGN: FireSim
-    TARGET_CONFIG: WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.LargeBoomConfig
-    PLATFORM_CONFIG: WithAutoILA_F65MHz_BaseF1Config
-    deploy_triplet: null
-    post_build_hook: null
-    metasim_customruntimeconfig: null
-    bit_builder_recipe: bit-builder-recipes/f1.yaml
+```
+Whereas baseline, uninstrumented versions are suffixed with `_baseline`, and lack the `CCW<width>_` prefix in their `TARGET_CONFIG`:
+```
+coverage_rocket_baseline:                                                                           
+    DESIGN: FireSim                                                                                 
+    TARGET_CONFIG: WithDefaultFireSimBridges_WithFireSimConfigTweaks_chipyard.QuadRocketConfig      
+    PLATFORM_CONFIG: WithAutoILA_F90MHz_BaseF1Config                                                
+    deploy_triplet: null                                                                            
+    post_build_hook: null                                                                           
+    metasim_customruntimeconfig: null                                                               
+    bit_builder_recipe: bit-builder-recipes/f1.yaml   
 ```
 
-Now add all the configs in `deploy/config_build.yaml` under `builds_to_run:` and comment out the
-once that were already in the file.
-To start building all designs, run the following command: `firesim buildbitstream`
-You will be notified via email once the virtual machine with the RTL design is built.
+We've taken the liberty of adding all 16 builds to your `deploy/config_build.yaml`. To illustrate the build process, we've commented out all but one of the builds. To build everything in parallel (on 16 z1d.2xlarge instances), uncomment the othe listed builds in `builds_to_run`.
+ 
+To start building, run the following command: `firesim buildbitstream`
+You will be notified via email once the virtual machine with the RTL design is built. Your bitstream(s), represented as HWDB snippets, will appear in `firesim/deploy/built-hwdb-entries`. You may append these file snippets to `deploy/config_hwdb.yaml`, overriding the entries we built for you.
 
-You should compare the utilization and frequency numbers to the ones presented in Figures 8 and 9 in the paper.
-In case there are any problems, you can find more info on building AFIs in
+Note, the reported utilization numbers will differ somewhat from the pubished versions in the paper, since those were built with an earlier version of FireSim and Vivado but the trends should hold.In case there are any problems, you can find more info on building AFIs in
 [the FireSim documentation](https://docs.fires.im/en/1.15.1/Building-a-FireSim-AFI.html).
 
 
 ### Linux Boot Speed
+
+**Kick the Tires**: Skip unless using the pre-compiled bitstreams. 
+
+To expedite running our linux boot, we've pre-compiled compiled a Buildroot linux distribution whose `init` process should call `poweroff` once it starts running. This image was fetched from `S3` when you setup your FireSim repo and can be found in `firesim/deploy/workloads/linux-poweroff/`. 
+
+Full details about running simulations under Firesim can be found [here](https://docs.fires.im/en/1.15.1/Running-Simulations-Tutorial/Running-a-Single-Node-Simulation.html). For your convenience, we've modified the default runtime configuration file (`firesim/deploy/config_runtime.yaml`) to boot the provided buildroot linux distribution on a 16-bit coverage counter Rocket-based design. 
+
+```
+# in a fresh shell in the `firesim` directory:
+source sourceme-f1-manager.sh
+
+# Requests an FPGA instance
+firesim launchrunfarm
+
+# Programs the FPGA with our desired bitsream
+firesim infrasetup
+
+# Runs the simulation
+firesim runworkload
+
+```
+
+At this point the `firesim` manager program should producing a running log of simulator status:
+
+```
+FireSim Simulation Status @ 2023-02-05 00:26:52.668218
+--------------------------------------------------------------------------------
+This workload's output is located in:
+/home/centos/firesim/deploy/results-workload/2023-02-05--00-25-49-linux-poweroff/
+This run's log is located in:
+/home/centos/firesim/deploy/logs/2023-02-05--00-25-49-runworkload-P00DOYVXRGM89FBC.log
+This status will update every 10s.
+--------------------------------------------------------------------------------
+Instances
+--------------------------------------------------------------------------------
+Hostname/IP: 192.168.3.76 | Terminated: False
+--------------------------------------------------------------------------------
+Simulated Switches
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+Simulated Nodes/Jobs
+--------------------------------------------------------------------------------
+Hostname/IP: 192.168.3.76 | Job: linux-poweroff0 | Sim running: False
+--------------------------------------------------------------------------------
+Summary
+--------------------------------------------------------------------------------
+1/1 instances are still running.
+0/1 simulations are still running.
+--------------------------------------------------------------------------------
+```
+
+When the simulation is complete, the manager will copy back your results to:
+`firesim/results-workload/<date>-linux-poweroff/linux-poweroff0/`
+
+Of note, is the 'uartlog' which will have the console output from linux boot as well as the simulation runtime statistics. The tail of this log
+should look as follows, with only small changes in wallclock-related times. 
+
+```
+AH00558: httpd: Could not reliably determine the server's fully qualified domain name, using 127.0.1.1. Set the 'ServerName' directive globally to suppress this message
+Starting dropbear sshd: OK                                                                          
+Cycles elapsed: 924391871                                                                           
+Time elapsed: 1.745500000 seconds                                                                   
+Powering off immediately.                                                                           
+[    1.770936] reboot: Power down                                                                   
+[SERIAL] starting to scan out coverage                                                              
+[COVERAGE] starting to scan                                                                         
+[COVERAGE] done scanning                                                                            
+[COVERAGE] 0.035377s (0.0729254% of total 48.5112s simulation time) spent scanning out coverage     
+[SERIAL] done scanning                                                                              
+                                                                                                    
+Simulation complete.                                                                                
+*** PASSED *** after 3141466757 cycles                                                              
+                                                                                                    
+Emulation Performance Summary                                                                       
+------------------------------                                                                      
+Wallclock Time Elapsed: 48.5 s                                                                      
+Host Frequency: 89.998 MHz                                                                          
+Target Cycles Emulated: 3141466757                                                                  
+Effective Target Frequency: 64.745 MHz                                                              
+FMR: 1.39                                                                                           
+Note: The latter three figures are based on the fastest target clock.  
+```
+
+Feel free to update `firesim/deploy/config_runtime.yaml` to run against one of the other designs, by modifying the  `default_hw_config` field to specify one of the other designs provided in `firesim/deploy/config_hwdb.yaml`. For each simulation, make sure to run both:
+```
+firesim infrasetup
+firesim runworkload
+```
+
+When you're done, release your F1 instance by running:
+
+```
+firesim terminaterunfarm
+```
+
+Then, double check in your AWS console that the instance has been terminated. 
 
 We are still ironing out some bugs in order to allow you to reproduce the following claim:
 > We used our instrumented SoCs with 16-bit coverage counters to boot Linux and obtained line coverage results. For the RocketChip design the simulation executed 3.3B cycles in 50.4s (65 MHz). Scanning out the 8060 cover counts at the end of the simulation took 12ms. For the BOOM design the simulation executed 1.7B cycles in 42.6s (40 MHz). Scanning out the 12059 cover counts at the end of the simulation took 17ms.

@@ -45,10 +45,14 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
       if (localComponents.isEmpty) {
         List()
       } else {
+        // sometime wires/nodes get annotated instead of registers, we want to filter those out
+        val isReg = findRegNames(mod.body)
+        val realStateRegs = localComponents.filter(c => isReg(c._1))
         // extract net info from module
-        val regNames = localComponents.keySet
+        val regNames = realStateRegs.keySet
         val netData = new ModuleNetAnalyzer(regNames).run(mod)
-        localComponents.map { case (name, anno) =>
+        // sometimes wires/nodes instead of registers
+        realStateRegs.map { case (name, anno) =>
           analyzeFSM(c.module(mod.name), name, netData, enums(anno.enumTypeName).definition)
         }.toList
       }
@@ -146,6 +150,15 @@ private class FsmAnalyzer(con: Map[String, ConnectionInfo], stateRegName: String
         // try to propagate any constants
         propConst(other)
     }
+  }
+}
+
+private object findRegNames {
+  def apply(s: ir.Statement): Set[String] = s match {
+    case ir.DefRegister(_, name, _, _, _, _) => Set(name)
+    case ir.Block(stmts) => stmts.map(apply).reduce(_ | _)
+    case ir.Conditionally(_, _, conseq, alt) => Seq(conseq, alt).map(apply).reduce(_ | _)
+    case _ => Set()
   }
 }
 

@@ -64,9 +64,10 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
     val (resetState, next) = destructReset(nextExpr)
 
     // analyze next state expression for each start state
+    val allStates = states.values.toSeq
     val transitions = states.toSeq.sortBy(_._2).flatMap { case (name, from) =>
-      val res = new FsmAnalyzer(netData.con, regName, from).analyzeNext(next)
-      res.map{ case (_pred, to) =>  from -> to}
+      val res = new FsmAnalyzer(netData.con, regName, from, allStates).analyzeNext(next)
+      res.map(from -> _)
     }
 
     FsmInfoAnnotation(module.ref(regName),
@@ -90,43 +91,26 @@ object FsmInfoPass extends Transform with DependencyAPIMigration {
 }
 
 
-private class FsmAnalyzer(con: Map[String, ConnectionInfo], stateRegName: String, stateValue: BigInt) {
-  def analyzeNext(e: ir.Expression): Seq[(FsmPred, BigInt)] = {
+private class FsmAnalyzer(con: Map[String, ConnectionInfo], stateRegName: String, stateValue: BigInt, allStates: Seq[BigInt]) {
+  def analyzeNext(e: ir.Expression): Seq[BigInt] = {
     val simplified = simplify(followAll = true)(e)
     simplified match {
-      case ir.UIntLiteral(value, _) => Seq((FTrue, value)) // the state will be `value` without any condition
+      case ir.UIntLiteral(value, _) => Seq(value) // the state will be `value` without any condition
       case ir.Mux(condExpr, tvalExpr, fvalExpr, _) =>
+        // try to simplify the predicate (but only if it references the state register!)
+        val simplePred = simplify(followAll = false)(condExpr)
+
         // implement branch
-        analyzePred(condExpr) match {
-          case FTrue => analyzeNext(tvalExpr)
-          case FFalse => analyzeNext(fvalExpr)
-          case cond =>
-            val ts = analyzeNext(tvalExpr).map{ case (pred, state) =>  FAnd(cond, pred) -> state}
-            val notCond = FNot(cond)
-            val fs = analyzeNext(fvalExpr).map{ case (pred, state) =>  FAnd(notCond, pred) -> state}
-            ts ++ fs
+        simplePred match {
+          case ir.UIntLiteral(value, _) if value == 1 => analyzeNext(tvalExpr)
+          case ir.UIntLiteral(value, _) if value == 0 => analyzeNext(fvalExpr)
+          case _ => // both branches are feasible
+            analyzeNext(tvalExpr) ++ analyzeNext(fvalExpr)
         }
-      case other => throw new NotImplementedError(s"Cannot analyze next state expression: ${other.serialize}")
+      case other =>
+        // over approximate
+        allStates
     }
-  }
-  def analyzePred(e: ir.Expression): FsmPred = {
-    require(firrtl.bitWidth(e.tpe) == 1, s"Unexpected non-bool expression ${e.serialize}")
-    simplify(followAll = false)(e) match { // predicates that do not depend on the state do not matter
-      case ir.UIntLiteral(value, _) => if(value == 1) { FTrue } else { FFalse }
-      case ir.DoPrim(PrimOps.And, Seq(a, b), _, _) =>
-        FAnd(analyzePred(a), analyzePred(b))
-      case ir.DoPrim(PrimOps.Or, Seq(a, b), _, _) =>
-        FOr(analyzePred(a), analyzePred(b))
-      case ir.DoPrim(PrimOps.Not, Seq(a), _, _) =>
-        FNot(analyzePred(a))
-      case other if !exprDependsOnState(other) => FAtom(other.serialize)
-      case other => throw new NotImplementedError(s"Cannot analyze next state expression: ${other.serialize}")
-    }
-  }
-  // this assumes that all relevant references have been inline!
-  private def exprDependsOnState(e: ir.Expression): Boolean = e match {
-    case ir.Reference(name, _, _, _) if name == stateRegName => true
-    case other => getChildren(other).exists(exprDependsOnState)
   }
   def simplify(followAll: Boolean)(e: ir.Expression): ir.Expression = {
     // we simplify bottom up!
@@ -170,26 +154,6 @@ private object propConst {
     case ir.DoPrim(PrimOps.Eq, Seq(ir.UIntLiteral(a, _), ir.UIntLiteral(b, _)), _, _) => toUInt(a == b)
     case other => other
   }
-}
-
-private trait FsmPred
-private case class FAnd(a: FsmPred, b: FsmPred) extends FsmPred {
-  override def toString = s"($a && $b)"
-}
-private case class FOr(a: FsmPred, b: FsmPred) extends FsmPred {
-  override def toString = s"($a || $b)"
-}
-private case class FNot(a: FsmPred) extends FsmPred {
-  override def toString = s"!$a"
-}
-private case class FAtom(name: String) extends FsmPred  {
-  override def toString = name
-}
-private case object FTrue extends FsmPred {
-  override def toString = "True"
-}
-private case object FFalse extends FsmPred {
-  override def toString = "False"
 }
 
 /** Contains the right-hand-side expression and transitive register dependency for a single node or register next expression. */

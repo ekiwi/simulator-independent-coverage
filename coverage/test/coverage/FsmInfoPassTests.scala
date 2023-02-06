@@ -5,19 +5,46 @@ import coverage.tests.CompilerTest
 import firrtl.options.Dependency
 import firrtl.stage.RunFirrtlTransformAnnotation
 import org.scalatest.flatspec.AnyFlatSpec
+import chisel3._
+import chisel3.experimental.ChiselEnum
+import firrtl.AnnotationSeq
 
+object FsmState extends ChiselEnum {
+  val A, B, C = Value
+}
+
+class ExampleFsm1 extends Module {
+  val in = IO(Input(Bool()))
+  val out = IO(Output(UInt(3.W)))
+  import FsmState._
+
+  val state = RegInit(A)
+  when(state === A) {
+    state := Mux(in, A, B)
+  }
+  when(state === B) {
+    state := A
+  }
+  when(state === C) {
+    state := A
+  }
+
+  out := state.asUInt
+}
 
 class FsmInfoPassTests extends AnyFlatSpec with CompilerTest {
 
   override protected def annos = Seq(RunFirrtlTransformAnnotation(Dependency(FsmInfoPass)))
 
+  private def getSingleInfo(rAnnos: AnnotationSeq): FsmInfoAnnotation = {
+    val infos = rAnnos.collect { case a: FsmInfoAnnotation => a }
+    assert(infos.length == 1, "expected exactly one info since there is only one FSM in the design")
+    infos.head
+  }
+
   it should "properly analyze the FIFO register FSM" in {
     val (_, rAnnos) = compile(new FifoRegister(8), "low")
-    val info = {
-      val infos = rAnnos.collect { case a: FsmInfoAnnotation => a }
-      assert(infos.length == 1, "expected exactly one info since there is only one FSM in the design")
-      infos.head
-    }
+    val info = getSingleInfo(rAnnos)
 
     checkInfo(info,
       states = Seq(0 -> "Empty", 1 -> "Full"),
@@ -27,6 +54,22 @@ class FsmInfoPassTests extends AnyFlatSpec with CompilerTest {
         "Empty" -> "Full",
         "Full" -> "Empty",
         "Full" -> "Full",
+      )
+    )
+  }
+
+  it should "analyze the Example FSM 1" in {
+    val (_, rAnnos) = compile(new ExampleFsm1, "low")
+    val info = getSingleInfo(rAnnos)
+
+    checkInfo(info,
+      states = Seq(0 -> "A", 1 -> "B", 2 -> "C"),
+      start = Some("A"),
+      transitions = Seq(
+        "A" -> "A",
+        "A" -> "B",
+        "B" -> "A",
+        "C" -> "A", // unreachable
       )
     )
   }

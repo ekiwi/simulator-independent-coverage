@@ -161,7 +161,7 @@ Make sure that our conclusion from Section 5.4 is supported by the plot:
 
 To reproduce our FireSim Integration results you need access to an AWS account.
 While it is probably possible to reproduce our results using your [own on premise FPGAs](https://docs.fires.im/en/1.15.1/Advanced-Usage/Vitis.html)
-instead of AWS, but that flow is **not officially supported** by this artifact.
+instead of AWS, the on premise FPGA flow is **not officially supported** by this artifact.
 
 
 ### Basic AWS Setup
@@ -195,7 +195,7 @@ git checkout coverage-asplos2023 # make sure we are on the branch with our modif
 
 Running the `build-setup.sh` will take several minutes.
 
-Now we are ready to ran a simple "MetaSimulation" to check that things are working:
+Now we are ready to run a simple "MetaSimulation" to check that things are working:
 ```{.sh}
 # in the firesim directory:
 source sourceme-f1-manager.sh

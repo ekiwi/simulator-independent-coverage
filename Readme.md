@@ -332,7 +332,7 @@ Summary
 ```
 
 When the simulation is complete, the manager will copy back your results to:
-`firesim/results-workload/<date>-linux-poweroff/linux-poweroff0/`
+`firesim/deploy/results-workload/<date>-linux-poweroff/linux-poweroff0/`
 
 Of note is the 'uartlog' which will have the console output from linux boot as well as the simulation runtime statistics. The tail of this log
 should look as follows, with only small changes in wallclock-related times. 

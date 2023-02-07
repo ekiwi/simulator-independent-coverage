@@ -363,6 +363,12 @@ FMR: 1.39
 Note: The latter three figures are based on the fastest target clock.  
 ```
 
+Please compare these numbers to what we report in our paper:
+> We used our instrumented SoCs with 16-bit coverage counters to boot Linux and obtained line coverage results. For the RocketChip design the simulation executed 3.3B cycles in 50.4s (65 MHz). Scanning out the 8060 cover counts at the end of the simulation took 12ms.
+
+With the newer version of FireSim and Linux used in this artifact, the numbers are slightly different,
+but the trends should hold.
+
 Feel free to update `firesim/deploy/config_runtime.yaml` to run against one of the other designs, by modifying the `default_hw_config` field to specify one of the other HWDB entries in `firesim/deploy/config_hwdb.yaml`. For each simulation, be sure to run both:
 ```
 firesim infrasetup

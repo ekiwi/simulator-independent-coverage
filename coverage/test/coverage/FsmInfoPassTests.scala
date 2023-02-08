@@ -7,6 +7,7 @@ import firrtl.stage.RunFirrtlTransformAnnotation
 import org.scalatest.flatspec.AnyFlatSpec
 import chisel3._
 import chisel3.experimental.ChiselEnum
+import chisel3.util._
 import firrtl.AnnotationSeq
 
 object FsmState extends ChiselEnum {
@@ -19,16 +20,13 @@ class ExampleFsm1 extends Module {
   import FsmState._
 
   val state = RegInit(A)
-  when(state === A) {
-    state := Mux(in, A, B)
+  switch(state) {
+    is(A) { state := Mux(in, A, B) }
+    is(B) {
+      when(in)   { state := B }
+      .otherwise { state := C }
+    }
   }
-  when(state === B) {
-    state := A
-  }
-  when(state === C) {
-    state := A
-  }
-
   out := state.asUInt
 }
 
@@ -68,8 +66,9 @@ class FsmInfoPassTests extends AnyFlatSpec with CompilerTest {
       transitions = Seq(
         "A" -> "A",
         "A" -> "B",
-        "B" -> "A",
-        "C" -> "A", // unreachable
+        "B" -> "B",
+        "B" -> "C",
+        "C" -> "C",
       )
     )
   }

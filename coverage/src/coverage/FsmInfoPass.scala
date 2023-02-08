@@ -132,7 +132,8 @@ private class FsmAnalyzer(con: Map[String, ConnectionInfo], stateRegName: String
         }
       case other =>
         // try to propagate any constants
-        propConst(other)
+        val constPropped = propConst(other)
+        constPropped
     }
   }
 }
@@ -152,6 +153,7 @@ private object propConst {
   def apply(e: ir.Expression): ir.Expression = e match {
     case ir.Mux(ir.UIntLiteral(value, _), tval, fval, _) => if(value == 1) { tval } else { fval }
     case ir.DoPrim(PrimOps.Eq, Seq(ir.UIntLiteral(a, _), ir.UIntLiteral(b, _)), _, _) => toUInt(a == b)
+    case ir.DoPrim(PrimOps.AsUInt, Seq(lit : ir.UIntLiteral), _, _) => lit
     case other => other
   }
 }

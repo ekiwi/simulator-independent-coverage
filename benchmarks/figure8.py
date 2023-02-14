@@ -62,9 +62,9 @@ def main():
     large_table = make_table(results, large_configs)
 
     # save
-    with open(_build_dir / "figure7_verilator_overhead_small.csv", "w") as f:
+    with open(_build_dir / "figure8_verilator_overhead_small.csv", "w") as f:
         f.write(table_to_string(small_table) + "\n")
-    with open(_build_dir / "figure7_verilator_overhead_large.csv", "w") as f:
+    with open(_build_dir / "figure8_verilator_overhead_large.csv", "w") as f:
         f.write(table_to_string(large_table) + "\n")
 
 

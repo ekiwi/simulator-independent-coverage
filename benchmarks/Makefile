@@ -320,13 +320,13 @@ endif
 	hyperfine --warmup 0 --max-runs 1 $(addprefix ./, $(filter %.bin, $(notdir $^)))
 
 
-# figure 7
+# figure 8
 BENCH_RESULTS = $(addprefix $(BUILD_DIR)/,$(addsuffix _results.csv, $(CIRCUIT_NAMES)))
-$(BUILD_DIR)/figure7_verilator_overhead_small.csv $(BUILD_DIR)/figure7_verilator_overhead_large.csv: $(BENCH_RESULTS) figure7.py
+$(BUILD_DIR)/figure8_verilator_overhead_small.csv $(BUILD_DIR)/figure8_verilator_overhead_large.csv: $(BENCH_RESULTS) figure8.py
 	mkdir -p $(BUILD_DIR)
-	./figure7.py
+	./figure8.py
 
-figure7: $(BUILD_DIR)/figure7_verilator_overhead_small.csv $(BUILD_DIR)/figure7_verilator_overhead_large.csv
+figure8: $(BUILD_DIR)/figure8_verilator_overhead_small.csv $(BUILD_DIR)/figure8_verilator_overhead_large.csv
 
 
 # cycle count
@@ -352,4 +352,4 @@ table2: $(BUILD_DIR)/table2.csv
 
 
 
-.PHONY: firrtl clean $(addsuffix _all_bin, $(CIRCUIT_NAMES)) figure7 table2
+.PHONY: firrtl clean $(addsuffix _all_bin, $(CIRCUIT_NAMES)) figure8 table2

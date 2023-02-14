@@ -76,8 +76,8 @@ fuzzing.csv fuzzing.png: $(ALL_COVERAGE_JSONS)
 	./plot_coverage.py --do-average --plot-file=fuzzing.png --csv=fuzzing.csv $(CONFIGS)
 
 
-figure10: fuzzing.csv
-	echo "TODO"
+figure11: fuzzing.csv
+	echo "Done."
 
 
 clean: # does not actually clean external dependencies!
@@ -86,4 +86,4 @@ clean: # does not actually clean external dependencies!
 	rm -rf i2c-mux-and-line-cov
 	rm -f fuzzing.png fuzzing.csv
 
-.PHONY: figure10 clean
+.PHONY: figure11 clean

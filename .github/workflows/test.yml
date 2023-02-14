@@ -76,8 +76,8 @@ jobs:
           cd verilator-${{ matrix.version }}
           sudo make install
           verilator --version
-      - name: Kick the Tires on figure7
-        run: cd benchmarks && make HYPERFINE_OPTS="--warmup=0 --runs=1" figure7
+      - name: Kick the Tires on figure8
+        run: cd benchmarks && make HYPERFINE_OPTS="--warmup=0 --runs=1" figure8
       - name: Kick the Tires on table2
         run: cd benchmarks && make HYPERFINE_OPTS="--warmup=0 --runs=1" table2
       # - name: Compile Scala
@@ -101,7 +101,7 @@ jobs:
       - name: install matplotlib and scipy
         run: sudo apt-get install -y python3-matplotlib python3-scipy
       - name: Kick the Tires on Fuzzing
-        run: cd fuzzing && make figure10 TIME_MIN=1 REPS=1
+        run: cd fuzzing && make figure11 TIME_MIN=1 REPS=1
 
 
   # Sentinel job to simplify how we specify which checks need to pass in branch

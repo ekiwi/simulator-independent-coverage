@@ -9,7 +9,7 @@ on AWS cloud FPGAs is necessary.
 _Hint_: The CI runs the equivalent of the reduced Kick the Tires tests. Feel free to have a look
 at the [test.yml](.github/workflows/test.yml) in case you get stuck.
 
-## Verilator Benchmarks (Figure 7 and Table 2)
+## Verilator Benchmarks (Figure 8 and Table 2)
 
 
 ### Install Verilator
@@ -96,26 +96,26 @@ optimizations. The purpose of table 2 is to give the reader a feel for
 the benchmarks used. Please make sure that we accurately did that.
 
 
-### Figure 7
+### Figure 8
 
 **Kick the Tires**: run a shorter version of the script by adding `HYPERFINE_OPTS="--warmup=0 --runs=1"` to the `make` invocation
 
-To re-create figure 7, please run the following commands:
+To re-create figure 8, please run the following commands:
 
 ```{.sh}
 verilator --version # make sure it is 4.034
 cd benchmarks
-make figure7
+make figure8
 ```
 
 Running the full version should take between 1h and 2h.
 
 ```{.sh}
-cat build/figure7_verilator_overhead_small.csv
-cat build/figure7_verilator_overhead_large.csv
+cat build/figure8_verilator_overhead_small.csv
+cat build/figure8_verilator_overhead_large.csv
 ```
 
-Please compare the data in the two CSV files with figure 7 in the paper.
+Please compare the data in the two CSV files with figure 8 in the paper.
 The first file corresponds to the left half plot, and the second file to the right half plot.
 Note that the CSV file contains percentage overhead in runtime when
 adding the instrumentation.
@@ -123,7 +123,7 @@ adding the instrumentation.
 Make sure that our main conclusion from Section 5.1 is supported by the numbers:
 > We find that in general our instrumentation causes the same or slightly less overhead compared to Verilator's built-in coverage.
 
-## Fuzzing (Figure 10)
+## Fuzzing (Figure 11)
 
 ### Install matplotlib and scipy
 
@@ -136,7 +136,7 @@ On Ubuntu you can install them like this:
 sudo apt-get install -y python3-matplotlib python3-scipy
 ```
 
-### Figure 10
+### Figure 11
 
 **Kick the Tires**: run a shorter version of the script by adding `TIME_MIN=1 REPS=1` to the `make` invocation
 
@@ -145,17 +145,14 @@ by our Makefile:
 
 ```{.sh}
 cd fuzzing
-make figure10
+make figure11
 ```
 
 This should take around `20min * 5 = 1h 40min` since we fuzz for 20 minutes and do
 that 5 times in order to compute the average coverage over time.
-Please open the `fuzzing.png` file and compare it to Figure 10. There will be some variation
-since fuzzing is a stochastic process. Also note that Figure 10 cuts of the y-axis
+Please open the `fuzzing.png` file and compare it to Figure 11. There will be some variation
+since fuzzing is a stochastic process. Also note that Figure 11 cuts of the y-axis
 bellow 70% while `fuzzing.png` shows the full y-axis.
-
-Make sure that our conclusion from Section 5.4 is supported by the plot:
-> Figure 10 shows that - in our particular case - there is little difference in the final results.
 
 ## FireSim Integration
 
@@ -227,12 +224,12 @@ These coverage counts were used together with the `scripts/merge_cov.py` script 
 the number of cover points synthesized for FireSim as described in section 5.3.
 Unfortunately this process is _not automated_.
 
-### FireSim Utilization Numbers (Figures 8 and 9)
+### FireSim Utilization Numbers (Figures 9 and 10)
 
 
 **Kick the Tires**: Skip. This takes several hours and is only for the full evaluation.
 
-In order to reproduce Figures 8 and 9, we need to setup the firesim manager.
+In order to reproduce Figures 9 and 10, we need to setup the firesim manager.
 You can find more information on how to enter your AWS credentials [in the FireSim documentation](https://docs.fires.im/en/1.15.1/Initial-Setup/Setting-up-your-Manager-Instance.html#completing-setup-using-the-manager).
 
 ```{.sh}

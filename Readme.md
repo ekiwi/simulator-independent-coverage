@@ -242,7 +242,7 @@ Now we need to build an FPGA image for our instrumented Rocket and BOOM cores wi
 widths in order to determine the utilization and `f_max` numbers.
 
 We are going to use a four core RocketChip and a single core BOOM SoC.
-We've added build recipes for you in `deploy/config_build_recipes.yaml`. Instrumented recipes take the form:
+We've added build recipes for you in `firesim/deploy/config_build_recipes.yaml`. Instrumented recipes take the form:
 
 ```
 # 48-bit variant
@@ -267,10 +267,14 @@ coverage_rocket_baseline:
     bit_builder_recipe: bit-builder-recipes/f1.yaml   
 ```
 
-We've taken the liberty of adding all 16 builds to your `deploy/config_build.yaml`. To illustrate the build process, we've commented out all but one of the builds. To build everything in parallel (on 16 z1d.2xlarge instances), uncomment the othe listed builds in `builds_to_run`.
+We've taken the liberty of adding all 16 builds to your `firesim/deploy/config_build.yaml`. To illustrate the build process, we've commented out all but one of the builds. To build everything in parallel (on 16 z1d.2xlarge instances), uncomment the othe listed builds in `builds_to_run`.
  
 To start building, run the following command: `firesim buildbitstream`
-You will be notified via email once the virtual machine with the RTL design is built. Your bitstream(s), represented as HWDB snippets, will appear in `firesim/deploy/built-hwdb-entries`. You may append these file snippets to `deploy/config_hwdb.yaml`, overriding the entries we built for you.
+You will be notified via email once the virtual machine with the RTL design is built. Your bitstream(s), represented as HWDB snippets, will appear in `firesim/deploy/built-hwdb-entries`. You may append these file snippets to `firesim/deploy/config_hwdb.yaml`, overriding the entries we built for you.
+
+The build reports can be found in `firesim/deploy/results-build/<timestamp>-<name>/<tuple>/build/reports/` (where `<timestamp>`, `<name>` and `<tuple>` have been replaced with the appropriate strings). Inside that folder you can find a file ending in `SH_CL_utilization.rpt`.
+Note down the number of `Logic LUTs` and the number of `FFs` in the first row of the table and
+compare them to the baseline numbers to obtain the data in Figure 9.
 
 Note, the reported utilization numbers will differ somewhat from the pubished versions in the paper, since those were built with an earlier version of FireSim and Vivado but the trends should hold.In case there are any problems, you can find more info on building AFIs in
 [the FireSim documentation](https://docs.fires.im/en/1.15.1/Building-a-FireSim-AFI.html).

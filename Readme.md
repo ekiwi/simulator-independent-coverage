@@ -279,6 +279,37 @@ compare them to the baseline numbers to obtain the data in Figure 9.
 Note, the reported utilization numbers will differ somewhat from the pubished versions in the paper, since those were built with an earlier version of FireSim and Vivado but the trends should hold.In case there are any problems, you can find more info on building AFIs in
 [the FireSim documentation](https://docs.fires.im/en/1.15.1/Building-a-FireSim-AFI.html).
 
+In order to get the maximum frequency, you need to look into the file ending in `SH_CL_final_timing_summary.rpt`. In that file, look for the entry for `buildtop_reference_clock`
+under `Min Delay Paths`. You should be able to see the `Slack` as well as the `period`.
+For example:
+```
+Min Delay Paths                                                                                     
+--------------------------------------------------------------------------------------              
+Slack (MET) :             0.010ns  (arrival time - required time)                                   
+  Source:                 WRAPPER_INST/CL/firesim_top/top/sim/target/FireSim_/lazyModule/system/tile_prci_domain_1/tile_reset_domain_tile/fpuOpt/fpmu/inPipe_bits_in2_reg[37]/C                                               
+                            (rising edge-triggered cell FDRE clocked by buildtop_reference_clock  {rise@0.000ns fall@5.556ns period=11.111ns})
+  Destination:            WRAPPER_INST/CL/firesim_top/top/sim/target/FireSim_/lazyModule/system/tile_prci_domain_1/tile_reset_domain_tile/fpuOpt/fpmu/io_out_b_data_reg[37]/D
+                            (rising edge-triggered cell FDRE clocked by buildtop_reference_clock  {rise@0.000ns fall@5.556ns period=11.111ns})
+  Path Group:             buildtop_reference_clock                                                  
+  Path Type:              Hold (Min at Slow Process Corner)                                         
+  Requirement:            0.000ns  (buildtop_reference_clock rise@0.000ns - buildtop_reference_clock rise@0.000ns)
+  Data Path Delay:        0.188ns  (logic 0.080ns (42.553%)  route 0.108ns (57.447%))               
+  Logic Levels:           1  (LUT6=1)                                                               
+  Clock Path Skew:        0.118ns (DCD - SCD - CPR)                                                 
+    Destination Clock Delay (DCD):    3.196ns                                                       
+    Source Clock Delay      (SCD):    3.074ns                                                       
+    Clock Pessimism Removal (CPR):    0.004ns                                                       
+  Clock Net Delay (Source):      2.551ns (routing 0.771ns, distribution 1.780ns)                    
+  Clock Net Delay (Destination): 2.883ns (routing 0.850ns, distribution 2.033ns)                    
+  Timing Exception:       MultiCycle Path   Setup -end   1    Hold  -start 0  
+```
+
+Here the `Slack` is `0.010ns` and the `period` is `11.111ns`. Thus the fastest frequency is
+`1 / (11.111ns - 0.010ns) = 90 MHz`. Note that the frequency might be lower than what is shown
+in the figure. The reason is that the artifact runs synthesis and place and route with the default
+constraint of 90MHz, while for the paper we used more aggressive timing constraints.
+
+
 
 ### Linux Boot Speed
 

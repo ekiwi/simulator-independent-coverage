@@ -9,6 +9,18 @@ on AWS cloud FPGAs is necessary.
 _Hint_: The CI runs the equivalent of the reduced Kick the Tires tests. Feel free to have a look
 at the [test.yml](.github/workflows/test.yml) in case you get stuck.
 
+## Accessing the Artifact
+
+Clone the repository to your local machine and define an environment variable that
+points to the artifact root directory (this will be useful later):
+```{.sh}
+git clone https://github.com/ekiwi/simulator-independent-coverage.git
+cd simulator-independent-coverage
+git checkout asplos2023 # ensure you are on the correct branch
+export ROOT=`pwd`
+```
+
+
 ## Verilator Benchmarks (Figure 8 and Table 2)
 
 
@@ -25,7 +37,7 @@ We provide the source code for Verilator `v4.034` as part of our artifact. More 
 On Ubuntu this would be:
 
 ```{.sh}
-sudo apt-get install -y git make autoconf g++ flex bison libfl2 libfl-dev
+sudo apt-get install -y git make autoconf g++ flex bison libfl2 libfl-dev bc
 ```
 
 Now you can build a local copy of Verilator. The following assumes that
@@ -40,7 +52,15 @@ make install
 ```
 
 To be able to use this verilator version you need to add
-`ROOT/ext/verilator-4.034/bin` to your `PATH`.
+`$ROOT/ext/verilator-4.034/bin` to your `PATH`. You might also need to set
+the environment variable `VERILATOR_ROOT` to `$ROOT/ext/verilator-4.034`.
+If you are using `bash` as your shell:
+```{.sh}
+export PATH=$PATH:$ROOT/ext/verilator-4.034/bin
+export VERILATOR_ROOT=$ROOT/ext/verilator-4.034
+```
+
+
 When you now run `verilator --version` you should see the following output:
 
 ```{.sh}
@@ -82,7 +102,7 @@ To re-create table 2, please run the following commands:
 
 ```{.sh}
 verilator --version # make sure it is 4.034
-cd benchmarks
+cd $ROOT/benchmarks
 make table2
 cat build/table2.csv
 ```
@@ -104,7 +124,7 @@ To re-create figure 8, please run the following commands:
 
 ```{.sh}
 verilator --version # make sure it is 4.034
-cd benchmarks
+cd $ROOT/benchmarks
 make figure8
 ```
 
@@ -144,7 +164,7 @@ Our artifact comes with a copy of the AFL source code which should be built auto
 by our Makefile:
 
 ```{.sh}
-cd fuzzing
+cd $ROOT/fuzzing
 make figure11
 ```
 

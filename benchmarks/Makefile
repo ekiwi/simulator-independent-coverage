@@ -353,3 +353,6 @@ table2: $(BUILD_DIR)/table2.csv
 
 
 .PHONY: firrtl clean $(addsuffix _all_bin, $(CIRCUIT_NAMES)) figure8 table2
+
+# small hack to ensure there always is a build directory
+$(shell mkdir -p $(BUILD_DIR))

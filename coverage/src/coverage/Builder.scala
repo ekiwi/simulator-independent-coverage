@@ -37,8 +37,9 @@ object Builder {
     val ports = flattenedPorts(m.ports)
     val clockIO = ports.filter(_.tpe == ir.ClockType)
     val clockInputs = clockIO.filter(_.flow == SourceFlow)
-    // if(m.)
-    if(m.name.startsWith("AsyncQueue")) {
+
+    val isAsyncQueue = m.name == "AsyncQueue" || m.name.startsWith("AsyncQueue_")
+    if(isAsyncQueue) {
       // The "clock" input of the AsyncQueue from rocketchip is unused
       // thus, even if both sides of the AsyncQueue are in the same clock domain (which is an assumption that we make)
       // using "clock" will lead to counters that never increment.

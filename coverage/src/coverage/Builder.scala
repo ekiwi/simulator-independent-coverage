@@ -36,7 +36,17 @@ object Builder {
   def findClocks(m: ir.Module): Seq[ir.RefLikeExpression] = {
     val ports = flattenedPorts(m.ports)
     val clockIO = ports.filter(_.tpe == ir.ClockType)
-    clockIO.filter(_.flow == SourceFlow)
+    val clockInputs = clockIO.filter(_.flow == SourceFlow)
+    // if(m.)
+    if(m.name.startsWith("AsyncQueue")) {
+      // The "clock" input of the AsyncQueue from rocketchip is unused
+      // thus, even if both sides of the AsyncQueue are in the same clock domain (which is an assumption that we make)
+      // using "clock" will lead to counters that never increment.
+      // Using any of the other clocks is fine!
+      clockInputs.filterNot(_.serialize == "clock")
+    } else {
+      clockInputs
+    }
   }
 
   def refToTarget(module: IsModule, ref: ir.RefLikeExpression): ReferenceTarget = ref match {

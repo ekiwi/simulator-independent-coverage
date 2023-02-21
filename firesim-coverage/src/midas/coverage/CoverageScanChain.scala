@@ -20,7 +20,7 @@ import midas.widgets.BridgeIOAnnotation
 import scala.collection.mutable
 
 case class CoverageScanChainOptions(counterWidth: Int = 32) extends NoTargetAnnotation {
-  require(counterWidth > 0)
+  require(counterWidth >= 0)
 }
 
 /** @param target the top-level module
@@ -65,6 +65,12 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
     }
     require(opts.size < 2, s"Multiple options: $opts")
     val opt = opts.head
+
+    if(opt.counterWidth == 0) {
+      logger.info("[CoverageScanChainPass] counter width is set to zero, removing all cover statements")
+      val circuit = state.circuit.mapModule(removeCover.apply)
+      return state.copy(circuit = circuit)
+    }
 
     // we first calculate an appropriate prefix for the scan chain IO
     val prefixes = state.circuit.modules.flatMap(m => findPrefix(m).map(p => m.name -> p)).toMap
@@ -321,4 +327,16 @@ object CoverageScanChainPass extends Transform with DependencyAPIMigration {
   private val PortSuffixes = Seq("en", "in", "out")
   private val DefaultPrefix = "cover_chain"
 
+}
+
+/** Removes all cover statements. */
+private object removeCover {
+  def apply(m: ir.DefModule): ir.DefModule = m match {
+    case e : ir.ExtModule => e
+    case mod: ir.Module => mod.mapStmt(apply)
+  }
+  def apply(s: ir.Statement): ir.Statement = s match {
+    case v : ir.Verification if v.op == ir.Formal.Cover => ir.EmptyStmt
+    case other => other.mapStmt(apply)
+  }
 }

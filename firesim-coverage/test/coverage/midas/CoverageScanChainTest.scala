@@ -59,4 +59,16 @@ class CoverageScanChainTest extends AnyFlatSpec with CompilerTest {
     // the coverage counter should be initialized to zero
     assert(l.contains("reg [29:0] l_3 = 30'h0;"))
   }
+
+  it should "remove all coverage when counter width is zero" in {
+    val widthAnno = CoverageScanChainOptions(0)
+
+    val (result, rAnnos) = compile(new Test1Module(withSubmodules = true), "verilog", Seq(widthAnno))
+    val l = result.split('\n').map(_.trim)
+
+    // no scan chain should be added
+    assert(!l.exists(_.contains("cover_chain_en")))
+    // no cover statements should be emitted
+    assert(!l.exists(_.contains("cover(")))
+  }
 }

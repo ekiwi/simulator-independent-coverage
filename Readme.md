@@ -259,9 +259,10 @@ firesim managerinit --platform f1
 ```
 
 Now we need to build an FPGA image for our instrumented Rocket and BOOM cores with different coverage counter
-widths in order to determine the utilization and `f_max` numbers.
+widths in order to determine the utilization and `f_max` numbers. Unfortunately the more recent version of Vivado
+crashes with a segmentation fault when trying to build the BOOM designs.
 
-We are going to use a four core RocketChip and a single core BOOM SoC.
+We are going to use a four core RocketChip.
 We've added build recipes for you in `firesim/deploy/config_build_recipes.yaml`. Instrumented recipes take the form:
 
 ```
@@ -287,19 +288,23 @@ coverage_rocket_baseline:
     bit_builder_recipe: bit-builder-recipes/f1.yaml   
 ```
 
-We've taken the liberty of adding all 16 builds to your `firesim/deploy/config_build.yaml`. To illustrate the build process, we've commented out all but one of the builds. To build everything in parallel (on 16 z1d.2xlarge instances), uncomment the othe listed builds in `builds_to_run`.
+In order to measure the maximum frequency that can be achieved, we need to tell Vivado to try and generate a design with a high frequency.
+We thus provide RocketChip configuration that set the frequency constraint to 140MHz instead of 90MHz in order to trade of high frequency for higher resource usage.
+These configurations are suffixed `_f_max`.
+
+We've taken the liberty of adding all 16 builds to your `firesim/deploy/config_build.yaml`. To illustrate the build process, we've commented out all but one of the builds. To build everything in parallel (on 16 z1d.2xlarge instances), uncomment the other listed builds in `builds_to_run`.
  
 To start building, run the following command: `firesim buildbitstream`
 You will be notified via email once the virtual machine with the RTL design is built. Your bitstream(s), represented as HWDB snippets, will appear in `firesim/deploy/built-hwdb-entries`. You may append these file snippets to `firesim/deploy/config_hwdb.yaml`, overriding the entries we built for you.
 
 The build reports can be found in `firesim/deploy/results-build/<timestamp>-<name>/<tuple>/build/reports/` (where `<timestamp>`, `<name>` and `<tuple>` have been replaced with the appropriate strings). Inside that folder you can find a file ending in `SH_CL_utilization.rpt`.
 Note down the number of `Logic LUTs` and the number of `FFs` in the first row of the table and
-compare them to the baseline numbers to obtain the data in Figure 9.
+compare them to the baseline numbers to obtain the data in Figure 9. Remember to use the designs constrained to 90MHz in order to calculate the resource usage.
 
 Note, the reported utilization numbers will differ somewhat from the pubished versions in the paper, since those were built with an earlier version of FireSim and Vivado but the trends should hold. In case there are any problems, you can find more info on building AFIs in
 [the FireSim documentation](https://docs.fires.im/en/1.15.1/Building-a-FireSim-AFI.html).
 
-To measure an `fmax` trend over the different counter widths, modify your `config_build_recipes.yaml` to overconstrain the simulator frequencies. Do this by modifying the `PLATFORM_CONFIG` fields from: `WithAutoILA_F90MHz_BaseF1Config` to `WithAutoILA_F140MHz_BaseF1Config`. Then, uncomment all builds registered in `config_build.yaml`, and run `firesim buildbitstream`. All of your builds will fail -- this is intended. To yield the frequencies in our paper, we took the path with the largest-magnitude negative setup slack in the simulator's primary clock domain and added that to the period we requested. A timing summary for each design can be found in the same report folder above, in a file with a `SH_CL_final_timing_summary.rpt` suffix. In that file, look for the entries that fail to meet timing in the `buildtop_reference_clock` path group under `Max Delay Paths`. See the example below:
+To measure an `fmax` trend over the different counter widths, use the configs constrained to 140MHz with the `_f_max` suffix. Most of your builds will fail -- this is intended. To yield the frequencies in our paper, we took the path with the largest-magnitude negative setup slack in the simulator's primary clock domain and added that to the period we requested. A timing summary for each design can be found in the same report folder above, in a file with a `SH_CL_final_timing_summary.rpt` suffix. In that file, look for the entries that fail to meet timing in the `buildtop_reference_clock` path group under `Max Delay Paths`. See the example below:
 
 ```
 Max Delay Paths                                                                                     
